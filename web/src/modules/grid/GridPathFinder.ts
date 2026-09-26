@@ -5,6 +5,7 @@
  * Changes: instance-owned buffers, readonly queries and explicit Java array failures.
  */
 import { toJavaInt } from '../compatibility/index.ts';
+import { readGridFlag } from './mask.ts';
 
 const UNREACHABLE = 2147483647;
 
@@ -61,11 +62,11 @@ export class GridPathFinder {
   getStepBack(current: number, threat: number, passable: PDGridPassability): number {
     const distance = this.buildEscapeMap(current, threat, passable);
     for (let i = 0; i < this.size; i++) this.goals[i] = this.distanceAt(i) === distance ? 1 : 0;
-    if (this.readFlag(this.goals, current)) return -1;
+    if (readGridFlag(this.goals, current)) return -1;
     this.distances.fill(UNREACHABLE);
     let tail = 0;
     for (let i = 0; i < this.size; i++) {
-      if (this.readFlag(this.goals, i)) {
+      if (readGridFlag(this.goals, i)) {
         this.enqueue(tail++, i);
         this.writeDistance(i, 0);
       }
@@ -129,7 +130,7 @@ export class GridPathFinder {
     for (const offset of this.directions) {
       const cell = step + offset;
       // Do not add an x-boundary/corner check or deduplicate `from`: not in source.
-      if (cell === from || (cell >= 0 && cell < this.size && this.readFlag(passable, cell) && this.distanceAt(cell) > next)) {
+      if (cell === from || (cell >= 0 && cell < this.size && readGridFlag(passable, cell) && this.distanceAt(cell) > next)) {
         this.enqueue(tail++, cell);
         this.writeDistance(cell, next);
       }
@@ -168,9 +169,4 @@ export class GridPathFinder {
     return value;
   }
 
-  private readFlag(values: PDGridPassability, index: number): boolean {
-    const value = values[index];
-    if (value === undefined) throw new RangeError('Java boolean[] bounds');
-    return Boolean(value);
-  }
 }

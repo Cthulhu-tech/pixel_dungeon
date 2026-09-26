@@ -1,73 +1,73 @@
 # Фактический статус переноса
 
-Обновлено 2026-09-26. Поручение: последовательно выполнять задачи. PLAN P00–P10 — единственная очередь.
-Полной играбельной игры пока нет; следующий этап ядра выполняется без browser automation.
+Обновлено 2026-09-26. Продолжение: задача за задачей, PLAN P00–P10 остаётся единственной очередью.
+Полной играбельной игры ещё нет. Реализованы следующие законченные алгоритмические участки.
 
-## Законченные участки текущего продолжения
+## Результат текущего продолжения
 
-| Участок | Реализация | Фактическая проверка |
+| Участок P02 | Результат | Проверки |
 | --- | --- | --- |
-| P02: оставшиеся Random операции | collectionIndex/oneOf/element/elementWithin/collectionElement/weightedKey/shuffle/shufflePair | 6/6 новых tests, 4260 Java comparisons |
-| P02: старый scalar + новый Random | Все 16 методов wrapper; коллекционный порядок явный вход | 13/13 tests вместе; 9242 comparisons |
-| P02: PathFinder | exact path/step/retreat, limited map, source resize/bounds semantics | 5/5 tests, 5460 Java comparisons, включая 1049 одинаковых failure outcomes |
-| P01.5: extraction | grid + declared compatibility dependency + только их .d.ts | PASS, без DOM/adapters/прочих globals |
+| Оставшиеся Random операции | Все 16 wrapper methods; порядок коллекции — явный вход | 13/13 tests (старые + новые), 9242 Java cases |
+| PathFinder | exact path/step/retreat, limits, full distance buffer и исходные ошибки | 5/5 tests, 5460 cases |
+| Ballistica | collision/trace/distance, magic/hitChars, query order, reused buffer | 6/6 tests, 9150 cases |
 
-Random записан commit `3777e64296e2a87b52bf2812702d9909ddfb79a2`.
-PathFinder — следующий атомарный набор code/reference/tests/docs; current commit берётся из Git.
-Подробные symbol mappings: [random](features/random.md), [pathfinding](features/pathfinding.md).
+**Последний общий прогон: 24/24 PASS, 23852 сравнений с исходным Java, 0 skipped.**
+Команда из web: `node --experimental-strip-types --test tests/parity/random.test.mjs tests/parity/random-collections.test.mjs tests/parity/pathfinding.test.mjs tests/parity/ballistics.test.mjs`.
+Она теперь доступна как `test:parity:kernel`; это НЕ общий parity всей игры.
 
-## Реальные проверки и ограничения
+`node <typescript/bin/tsc> -p tsconfig.kernel.json`, `node tools/check-kernel-extraction.mjs`
+и `node tools/check-compatibility-extraction.mjs` — PASS. Изолированный host включает только
+grid, compatibility и их owner-scoped .d.ts; нет DOM/остальных globals, temporary hosts удалены.
 
-Из web выполнены:
-- `node --experimental-strip-types --test tests/parity/random.test.mjs tests/parity/random-collections.test.mjs`: 13/13 PASS.
-- `node --experimental-strip-types --test tests/parity/pathfinding.test.mjs`: 5/5 PASS, текущая матрица 5460.
-- Общий промежуточный прогон трёх suites: 18/18 PASS; затем добавлены 252 unlimited cases и path suite перепроверен.
-- `tsc -p tsconfig.compatibility.json`, `node <typescript/bin/tsc> -p tsconfig.kernel.json`: PASS/exit 0.
-- `node tools/check-compatibility-extraction.mjs`, `node tools/check-kernel-extraction.mjs`: PASS, temporary hosts удалены.
+Отдельные коммиты: Random `3777e64296e2a87b52bf2812702d9909ddfb79a2`;
+PathFinder `b9f21257bdad022d411b1795455ea30753fab398`; Ballistica — текущий атомарный набор.
+Symbol mappings: features/random.md, features/pathfinding.md, features/ballistics.md.
 
-Node 22.16.0, JDK 21.0.11, доступный TS 5.8.3. Полный clone недоступен из-за DNS;
-относящиеся файлы восстановлены через GitHub connector. Исходные Random.java и PathFinder.java
-проверены по Git blob. Доступный compiler используется локально, зависимости проекта не
-понижались/не устанавливались. Полный package.json-набор с TS 6.0.3 ещё не проверен.
+## Достоверность и границы
 
-Не запускались: npm install/ci всего приложения, full typecheck/build/architecture gate,
-вся инвентаризация на обоих Git trees, Android app, браузер/Playwright/CDP и ручная visual/input/audio приёмка.
-Успех выбранного ядра не означает успех этих областей. `test:parity:kernel` — выбранное ядро;
-общий `test:parity` сохраняет NOT_READY до полного покрытия, `test:e2e` сохраняет blocker.
+Reference Random/PathFinder/Ballistica byte-identical pinned blobs, hashes проверяются до javac.
+Ballistica test-only Level/Actor дают фиксированные flags/occupancy и записывают query order;
+это не реализации production Level/Actor и не Android evidence. Expected считает оригинальный
+Ballistica.java. Java array failure/частичные buffers сравниваются, а не превращаются в success.
 
-## Границы результата
+Source quirks сохранены: RNG empty-draw/paired mutation; PathFinder neighbor order, equal-area
+resize, equal-endpoint stale map, flattened adjacency/bounded queue; Ballistica duplicate
+target, wall rollback, short-circuit lookup, trace overflow post-increment и stale tail.
+Общее чтение boolean mask вынесено в grid/mask.ts; PathFinder регрессии повторно прошли.
 
-Random: арифметика всех wrapper методов проверена на выбранных входах; production PRNG,
-сохранение его состояния, порядок владельцев HashMap/HashSet в Android и общий draw schedule открыты.
-PathFinder: алгоритм перенесён отдельно; Dungeon.findPath/flee с Actor occupancy, visible,
-flying/avoid и весь Actor scheduler/AI ещё не перенесены. Нет обещания готового движения героя.
+Node 22.16.0, JDK 21.0.11, доступный TS 5.8.3. Полный clone недоступен из-за GitHub DNS;
+относящиеся файлы восстановлены через connector. Project dependency versions не изменялись
+и полный npm install/ci не выполнен. Доступный локальный compiler не доказывает работу TS 6.0.3.
 
-Сохранены source quirks: разные draws пустых коллекций, частичные paired-shuffle mutations,
-equal-endpoint stale distances, equal-area direction reuse, flattened row adjacency и bounded
-queue/bounds errors. Ни одно не заменено fallback/новым алгоритмом. Public API PathFinder
-требует положительные int32 dimensions; неверные размеры не объявлены частью tested parity.
+**Не выполнено:** full app typecheck/build/architecture gate, полная source inventory проверка,
+полная Android/PD-classes сборка, browser launch/automation и ручная visual/input/audio приёмка.
+Остающиеся Playwright файлы не запускались; npm test:e2e — blocker/exit 2. Общий test:parity
+не выдаёт ложный PASS. Количество cases не является процентом готовности.
 
-## Открытые области PLAN
+## Что остаётся по плану
 
-P00.1/P00.2: file inventory/source-map существуют, semantic coverage и aggregation feature evidence открыты.
-P00.3–P00.5: две независимые Java-подсистемы работают; полная PD-classes/Android-сборка не подтверждена.
-P00.6: collection owners, saves, clocks, callback phases, presentation RNG требуют дальнейшего аудита.
-P01/P01-RULES: общий toolchain/lockfile, старые type imports, shaders, остальные policy gates открыты.
-P02: Random wrapper + PathFinder реализованы; далее Ballistica/ShadowCaster и Actor/continuations.
-P03–P10: завершение не подтверждено. Full gameplay/visual parity NOT_VERIFIED.
+- P00.1/P00.2: inventory/source-map существуют; semantic полнота и aggregation feature evidence открыты.
+- P00.3–P00.5: независимые subsystem oracles работают; полный Android runtime ещё не подтверждён.
+- P00.6: HashMap/HashSet владельцы, общий random draw schedule, callbacks, saves и clocks.
+- P01/P01-RULES: full toolchain/lockfile, старые type imports, shader policy, остальные checks.
+- P02: далее ShadowCaster и Actor/continuations. Production RNG/save state и Dungeon.findPath/flee
+  с visible/flying/avoid/Actor occupancy ещё не интегрированы.
+- P03–P10: завершение не подтверждено; full gameplay/visual parity NOT_VERIFIED.
 
-File-level source-map/generated summary ещё не обновляют эти symbol reports; не помечать целый
-файл VERIFIED по наличию класса и не обнулять существующее при последующей генерации.
+Public APIs grid принимают положительные dimensions; Ballistica parity проверена для исходных
+32×32. Ports не владеют чужими masks/actors. Save, combat damage, AI и анимации не объявляются
+реализованными по одному геометрическому алгоритму. Source-map/generated summary пока не
+агрегируют symbol reports; не обнулять имеющееся и не ставить whole-file VERIFIED автоматически.
 
 ## История и сохранность
 
-Baseline `ce7f241515fd5c040fcf18b4beb5b7a49d9d535f`, Pixel Dungeon 1.9.1/74;
-PD-classes candidate `c0b690a4163020963e70a58a7d4f27965dc8f134`.
-`6f4ffdfd40fb31d00625ea24e4285ff2dbee0b60` — первоначальный контекст;
-`6cc1858e1534b3b826e2ae0cf25e1bf52b2dd1d2` — уже существующий inventory/web scaffold;
-`029fac6143cc09cc000b68c4349e1d0e990acc1f` — план/PSX-CORE правила;
-`93aa9b7dba5e78fbe7e471ce49f137e839ffb8ce` — scalar Random, extraction, browser blocker и tmp ignore.
+Baseline `ce7f241515fd5c040fcf18b4beb5b7a49d9d535f` (Pixel Dungeon 1.9.1/74), PD-classes
+`c0b690a4163020963e70a58a7d4f27965dc8f134` неизменны.
+`6f4ffdfd40fb31d00625ea24e4285ff2dbee0b60` — первичные docs;
+`6cc1858e1534b3b826e2ae0cf25e1bf52b2dd1d2` — ранее существовавший inventory/web scaffold;
+`029fac6143cc09cc000b68c4349e1d0e990acc1f` — согласованный PLAN и PSX/CORE rules;
+`93aa9b7dba5e78fbe7e471ce49f137e839ffb8ce` — scalar Random, первый oracle/extraction и browser blocker.
 
-Исходные src/assets/res/AndroidManifest/LICENSE не менялись. Reference Java добавлена только
-под tests/reference с provenance. Новый код — web, harness — tools/port; временное — root tmp.
-Никаких новых graphics/gameplay features, art, dependency downgrades или запуска браузера.
+Исходные src/assets/res/AndroidManifest/LICENSE не менялись. Новые runtime files — web,
+references — tests/reference, input harness — tools/port, временное — root tmp. Нового арта,
+игровых заглушек, dependency downgrade, браузерного запуска или reset существующей работы нет.

@@ -10,3 +10,4 @@ export const NEIGHBOURS8: readonly number[] = Object.freeze([
   1 + LEVEL_WIDTH, 1 - LEVEL_WIDTH, -1 + LEVEL_WIDTH, -1 - LEVEL_WIDTH,
 ]);
 export { GridPathFinder } from './GridPathFinder.ts';
+export { GridBallistica } from './GridBallistica.ts';

@@ -17,6 +17,7 @@
     "src/types/compatibility/random.d.ts",
     "src/modules/compatibility/index.ts",
     "src/types/grid/pathfinding.d.ts",
-    "src/modules/grid/index.ts"
+    "src/modules/grid/index.ts",
+    "src/types/grid/ballistics.d.ts"
   ]
 }

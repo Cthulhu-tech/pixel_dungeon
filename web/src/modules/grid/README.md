@@ -1,47 +1,51 @@
 # Grid / Клеточное ядро
 
-## Владелец и API
+## Владелец и публичная граница
 
-Модуль содержит исходные Level dimensions/neighbor constants и `GridPathFinder`.
-Вызовы только через `index.ts`. `GridPathFinder` владеет distance/goals/queue каждого
-экземпляра; passability принадлежит вызывающему владельцу и не мутируется. Нет Phaser,
-DOM, store, RNG, таймера или глобального изменяемого массива. Чистая зависимость —
-`compatibility/index.ts:toJavaInt` для float/int-семантики escape factor.
-Собственный контракт `PDGridPassability` — `web/src/types/grid/pathfinding.d.ts`.
+Модуль содержит исходные Level constants, GridPathFinder и GridBallistica. Runtime API
+через index.ts; type-only contracts — только types/grid/*.d.ts. Нет Phaser/DOM/stores,
+таймеров, глобальных mutable buffers или владельца всей игры. Чистая внешняя зависимость —
+compatibility/index.ts:toJavaInt для escape-factor arithmetic. mask.ts — единое внутреннее
+чтение исходных boolean flags, не отдельная система и не schema validator.
 
-Создать `new GridPathFinder(width, height)` с положительными целыми dimensions/area int32.
-`find` возвращает упорядоченный массив клеток либо null; `getStep`/`getStepBack` — клетку
-либо -1. `buildDistanceMap(to, mask, limit)` строит ограниченные расстояния.
-`distanceAt` — readonly query, `copyDistanceMap` — явная detached projection, не второй owner.
+GridPathFinder владеет distance/goals/queue экземпляра. find/getStep/getStepBack и
+buildDistanceMap сохраняют source ordering, bounded queue и failures. Passability принадлежит
+вызывающему владельцу; distanceAt и detached copyDistanceMap не дают второй live owner.
+Положительные integer dimensions — явный контракт. Equal-area reshape не меняет offsets,
+from==to не сбрасывает distance, flattened row adjacency и source errors сохранены.
+Dungeon.findPath/flee с occupancy/visible/flying/avoid ещё должны подключить этот алгоритм.
 
-Сохраняется исходный порядок PathFinder, отличный от NEIGHBOURS8 уровня. На этом нижнем
-слое нет новых corner/x-boundary проверок. from==to возвращает null/-1 без сброса прежней
-distance map. Повторный setMapSize с той же площадью сохраняет прежние offsets, как Java.
-Queue имеет исходную ёмкость; повторный enqueue from и bounds failures не замаскированы.
-Эти особенности не исправляются попутно. Source caller Dungeon.findPath/flee дополнительно
-строит mask с учётом акторов/видимости/flying/avoid: этот application-layer ещё не перенесён.
+GridBallistica владеет trace/distance экземпляра. cast принимает query-only PDBallisticaWorld
+(passable/avoid/losBlocking/hasCharacter). traceAt/copyTrace — чтение/явная detached copy.
+Алгоритм сохраняет повтор final target, short-circuit actor lookup, magic continuation,
+wall rollback, post-increment при overflow и stale tail. World/Actor state не изменяется.
+Проверка относится к исходной карте 32×32; constructor dimensions не доказывают любой размер.
 
 ## Проверки и извлечение
 
-`npm run test:parity:pathfinding`: 5/5 tests, 5460 original-Java cases, включая 1049 исходных
-failure outcomes и частичные distance buffers. Матрица содержит 3×3, 4×5, 8×8, 32×32,
-разные маски, endpoints, retreat, limits, resize и previous-buffer semantics.
-Java reference hash проверяется; весь expected вычисляет оригинал.
+`npm run test:parity:pathfinding`: 5/5 tests, 5460 независимых Java cases.
+`npm run test:parity:ballistics`: 6/6 tests, 9150 Java cases.
+`npm run test:parity:kernel`: последний общий прогон — 24/24 tests, 23852 cases с Random.
+Исходные algorithms hash-checked; Ballistica использует явно помеченные test-only input
+adapters Level/Actor, не альтернативный алгоритм и не доказательство Android integration.
 
-`npm run typecheck:kernel` и `npm run check:extraction:kernel`: только grid, compatibility
-и их собственные declarations, без остального приложения/DOM. Тестировалось на Node 22.16.0,
-JDK 21.0.11 и доступном TS 5.8.3; полный package.json-набор не установлен.
-Для выноса нужны modules/grid, modules/compatibility, types/grid и types/compatibility,
-сохранение GPL и public contracts. Здесь нет UI/lifecycle ресурсов для фиктивного dispose.
+`npm run typecheck:kernel`, `npm run check:extraction:kernel`: grid + compatibility + только
+их declarations, без DOM/прочих globals/адаптеров. Проверено на Node 22.16.0, JDK 21.0.11,
+доступном TS 5.8.3. Полный пакетный набор из package.json и full browser build ещё не проверены.
+Для выноса нужны modules/grid, modules/compatibility, types/grid, types/compatibility и GPL notices.
+Здесь нет presentation ресурсов, требующих фиктивного dispose.
 
 ## English
 
-GridPathFinder is an instance-owned port of the pinned PD-classes algorithm, not A* or
-navcat. It returns the exact ordered path/step and preserves source tie order, same-area
-reshape behavior, stale distance on equal endpoints, flattened adjacency and failure
-outcomes. Passability is supplied by the caller; Dungeon-level occupancy/AI integration
-remains open. Positive integer dimensions are the new API's explicit precondition.
+This is a pure, instance-owned port of the original grid algorithms, not navcat/A*.
+GridPathFinder preserves exact paths/steps, retreat, distance buffers, original ties and
+failure outcomes. GridBallistica preserves collision cells, trace/distance semantics,
+lookup order, duplicate destination, old tail and failed-write post-increments. World
+flags and occupancy arrive via a query-only port. Neither algorithm owns actor/game state.
 
-Five tests passed with 5460 independent Java comparisons. Extraction/typecheck passed for
-grid plus its declared pure compatibility dependency and owner-scoped .d.ts only. This is
-not full gameplay or browser evidence; see docs/port/features/pathfinding.md for scope.
+Five path tests (5460 Java cases) and six ballistic tests (9150 Java cases) pass. The joint
+kernel run with Random passes 24 tests / 23852 comparisons. Extraction/typecheck passes with
+only grid, its pure compatibility dependency and owner .d.ts. Ballistica's Java Level/Actor
+hosts supply inputs only; this is not production Android/browser integration evidence.
+Detailed mappings: docs/port/features/pathfinding.md and ballistics.md. ShadowCaster and
+Actor/AI integration remain open.
