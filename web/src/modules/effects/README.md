@@ -37,3 +37,18 @@ docs/port/features/movement-buffs.md; актуальный результат CI
 
 Extraction: modules/effects plus only types/effects and their public injected ports.
 Run npm run typecheck:effects and npm run check:extraction:effects; tests never open a browser.
+
+## Concrete status effects / Конкретные состояния
+
+SimpleStatuses, ControlStatuses, VisionStatuses and Invisibility implement the first 16
+source status classes. Original display metadata/constants belong to assets/status-effects.json;
+statusInfo is a readonly API to trusted data. JSON is loaded directly without defaults,
+normalization or schema validation. Domain imports no UI engine. Source-specific side-effect
+order, duration arithmetic, target retention and repeated detach behavior are preserved.
+Shadows.ownState/restoreOwnState represent only its original left field; turns owns clock/id.
+MindVision.distance is not silently persisted. CharacterStatus owns the actual target flags.
+
+Verification and exact scope: docs/port/features/status-effects.md. Extraction copies only
+effects and owner declarations/data; TypeScript resolveJsonModule is enabled for these trusted
+imports. Remaining damage/resource effects and full item/actor/world integration are separate
+PLAN tasks, not generic effects silently substituted by these classes.

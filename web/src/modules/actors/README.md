@@ -68,3 +68,10 @@ of the original Char.remove. Duplicate add and absent remove retain source side 
 sprite подавляет только исходную ветку add; remove/update не получают новый fallback.
 Extraction needs actors files and only types/actors, plus the previously documented combat
 scope for the shared extraction command. New evidence: docs/port/features/character-buffs.md.
+
+## CharacterStatus / Флаги
+
+CharacterStatus owns paralysed/rooted/flying/invisible/viewDistance, with the source defaults
+and signed integer counters. These are mutable source fields, not a second cached projection
+of the buff collection. Snapshots are read models, not additional persisted Char fields.
+Concrete effects receive narrow write/read ports to this owner; they own no duplicate flags.

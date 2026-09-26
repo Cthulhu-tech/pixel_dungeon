@@ -3,7 +3,22 @@
 Обновлено 2026-09-26. Работа по единому PLAN, без промежуточных подтверждений.
 Полной играбельной браузерной игры пока нет. Полный visual/input/audio parity NOT_VERIFIED.
 
-## Текущий участок: коллекция эффектов Char
+## Следующий реализованный участок: 16 конкретных статусных эффектов
+
+На базе f0d28682724eca00f14cec85e58bbf2d6a48bcee добавлены CharacterStatus и классы Cripple,
+Slow, Speed, Vertigo, Amok, Rage, Sleep, MindVision, Awareness, Blindness, Light, Paralysis,
+Roots, Levitation, Invisibility, Shadows. Metadata и constants извлечены в owner-local JSON.
+Подробности: [features/status-effects.md](features/status-effects.md).
+
+Локально: 390 Java-последовательностей /6465 checkpoints; 8 integrations с настоящими
+владельцами flags/health/collection/turns. Полный test:kernel **108/108 PASS**, 0 skipped;
+TS6 typecheck/extraction effects и character PASS, boundary tests9/9 и общий boundary PASS.
+Новая публикация/CI этих файлов ещё не подтверждены. Визуальная приёмка не выполнялась.
+
+Добавлен диагностический probe опубликованных альтернативных declaration sets. Он не
+меняет package pins и не скрывает общий app failure; его результаты предстоит прочитать.
+
+## Предыдущий участок: коллекция эффектов Char
 
 Исходный code checkpoint: `1330ba6353e9379c0b2f52d5dde910721867f5d9`; инфраструктура inputs
 добавлена в `0ec2fcc0c9b28820d14f16fac9516e1ce2656600`.
@@ -18,11 +33,14 @@ Java-harness девяти исходных методов, 5 parity/regression t
 - typecheck:character и extraction с negative declaration control PASS.
 - test:kernel **99/99 PASS**, 0 skipped; новые и предыдущие тесты.
 - check-boundaries regression **8/8 PASS**; общий check:boundaries PASS.
-Новый CI после публикации этого участка ещё не подтверждён: локальный успех не приписан CI.
+CI run36234828235 на f0d28682724eca00f14cec85e58bbf2d6a48bcee: kernel job108384583625 SUCCESS;
+scoped typecheck/extraction SUCCESS в dependency job108384583514, затем app build FAILURE.
+Статусы шагов прочитаны; локальные числа тестов не выдаются за отдельно прочитанный log CI.
 
 Коллекцией владеет Char, target — Buff, часы — TurnScheduler. Реальные существующие владельцы
 соединены тестами: HP=0/очистка эффектов/freeCell, снятие Frost перед уроном и Slow/Speed.
-Конкретные Frost/Poison и полноценный Char/Hero/Mob пока не реализованы этой коллекцией.
+Полноценный Char/Hero/Mob не реализован одной коллекцией; Frost/Poison остаются следующим
+участком, новая группа control/vision/status описана выше.
 Порядок Java HashSet остаётся явным входом, не подменён универсальным JS Set.
 
 ## Полный локальный snapshot и общий build
@@ -67,7 +85,8 @@ P00.3–P00.6: полный Android oracle, production collection/RNG order, sav
 P01.1: устранить vendor declaration incompatibility, canonical lockfile и npm ci.
 P01-RULES: старые type imports/scaffold contracts, shader path и остальные policy gates.
 P03/P05/P06: конкретные эффекты/собственные checkpoints, флаги и composition реальных Char,
-затем Hero/Mob/Level и первый полный командный сценарий. Следующий участок — status effects.
+затем Hero/Mob/Level и первый полный командный сценарий. Следующий участок — damage/resource
+effects, связанное содержимое и состояния. Статусы не означают полный P06.
 P04–P10: полный content/UI/save/visual parity ещё не подтверждён.
 
 Baseline ce7f241515fd5c040fcf18b4beb5b7a49d9d535f и PD-classes

@@ -43,3 +43,11 @@ test('real global reads and shorthand references are still rejected', (t) => {
   assert.ok(errors.some(e => e.endsWith(': Date')));
   assert.ok(errors.some(e => e.endsWith(': globalThis')));
 });
+
+test('trusted owner JSON imports are allowed but another module assets are not', (t) => {
+  const files = { 'modules/a/index.ts': "import data from './assets/data.json' with {type:'json'};", 'modules/a/assets/data.json': '{"n":1}' };
+  assert.deepEqual(check(t, files), []);
+  files['modules/a/index.ts'] = "import data from '../b/assets/data.json' with {type:'json'};";
+  files['modules/b/assets/data.json'] = '{"n":1}';
+  assert.ok(check(t, files).some(e => e.includes('owning module assets')));
+});

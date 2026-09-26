@@ -12,10 +12,12 @@
     "noImplicitOverride": true,
     "allowImportingTsExtensions": true,
     "noEmit": true,
-    "types": []
+    "types": [],
+    "resolveJsonModule": true
   },
   "files": [
     "src/types/effects/buffs.d.ts",
-    "src/modules/effects/index.ts"
+    "src/modules/effects/index.ts",
+    "src/types/effects/status.d.ts"
   ]
 }

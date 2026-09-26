@@ -126,3 +126,14 @@ jobs:
         run: |
           npm run check:extraction:compatibility
           npm run check:extraction:turns
+      - name: Diagnose alternative published declarations without changing application pins
+        if: always() && hashFiles('web/node_modules/typescript/bin/tsc') != ''
+        run: node tools/probe-dependency-types.mjs
+      - name: Retain dependency type investigation
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: port-type-probe-${{ github.sha }}
+          path: tmp/dependency-type-probe.json
+          retention-days: 1
+          if-no-files-found: warn

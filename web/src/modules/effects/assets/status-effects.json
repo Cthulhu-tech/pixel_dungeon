@@ -1,0 +1,78 @@
+{
+  "Cripple": {
+    "icon": 23,
+    "title": "Crippled",
+    "duration": 10
+  },
+  "Slow": {
+    "icon": 7,
+    "title": "Slowed",
+    "duration": 10
+  },
+  "Speed": {
+    "icon": -1,
+    "title": null,
+    "duration": 10
+  },
+  "Vertigo": {
+    "icon": 29,
+    "title": "Vertigo",
+    "duration": 10
+  },
+  "Amok": {
+    "icon": 9,
+    "title": "Amok"
+  },
+  "Rage": {
+    "icon": 30,
+    "title": "Blinded with rage"
+  },
+  "Sleep": {
+    "icon": -1,
+    "title": null,
+    "soundSleep": 1.5
+  },
+  "MindVision": {
+    "icon": 0,
+    "title": "Mind vision",
+    "duration": 20
+  },
+  "Awareness": {
+    "icon": -1,
+    "title": null,
+    "duration": 2
+  },
+  "Blindness": {
+    "icon": 16,
+    "title": "Blinded"
+  },
+  "Light": {
+    "icon": 22,
+    "title": "Illuminated",
+    "duration": 250,
+    "distance": 4
+  },
+  "Paralysis": {
+    "icon": 4,
+    "title": "Paralysed",
+    "duration": 10
+  },
+  "Roots": {
+    "icon": 11,
+    "title": "Rooted"
+  },
+  "Levitation": {
+    "icon": 1,
+    "title": "Levitating",
+    "duration": 20
+  },
+  "Invisibility": {
+    "icon": 12,
+    "title": "Invisible",
+    "duration": 15
+  },
+  "Shadows": {
+    "icon": 13,
+    "title": "Shadowmelded"
+  }
+}

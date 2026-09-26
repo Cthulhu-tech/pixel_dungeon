@@ -4,7 +4,7 @@ import { resolve, relative, sep } from 'node:path';
 import { pathToFileURL } from 'node:url';
 const slash = (s) => s.split(sep).join('/');
 function filesAt(root) {
-  return readdirSync(root, { withFileTypes: true }).flatMap((e) => e.isDirectory() ? filesAt(resolve(root, e.name)) : /\.[cm]?tsx?$/.test(e.name) ? [resolve(root, e.name)] : []);
+  return readdirSync(root, { withFileTypes: true }).flatMap((e) => e.isDirectory() ? filesAt(resolve(root, e.name)) : /(?:\.[cm]?tsx?|\.json)$/.test(e.name) ? [resolve(root, e.name)] : []);
 }
 /** A property/declaration name is not a read of the homonymous global API. */
 function isPropertyOrDeclarationName(node) {
@@ -26,6 +26,7 @@ export function checkBoundaries(root = resolve('src')) {
   const files = filesAt(root); const known = new Set(files); const edges = new Map(); const errors = [];
   const forbidden = new Set(['window', 'document', 'globalThis', 'localStorage', 'sessionStorage', 'indexedDB', 'navigator', 'fetch', 'XMLHttpRequest', 'Audio', 'AudioContext', 'Date', 'setTimeout', 'setInterval', 'requestAnimationFrame', 'performance', 'process', 'require']);
   for (const file of files) {
+    if (file.endsWith('.json')) continue;
     const name = slash(relative(root, file)); const module = /^modules\/([^/]+)\//.exec(name)?.[1];
     const source = ts.createSourceFile(file, readFileSync(file, 'utf8'), ts.ScriptTarget.Latest, true);
     const dependencies = []; edges.set(file, dependencies);
@@ -35,10 +36,16 @@ export function checkBoundaries(root = resolve('src')) {
         if (module || name.startsWith('contracts/')) fail(node, `External or aliased dependency forbidden in pure code: ${specifier}`);
         return;
       }
-      const target = ts.resolveModuleName(specifier, file, { moduleResolution: ts.ModuleResolutionKind.Bundler, allowImportingTsExtensions: true }, ts.sys).resolvedModule?.resolvedFileName;
+      const target = ts.resolveModuleName(specifier, file, { moduleResolution: ts.ModuleResolutionKind.Bundler, allowImportingTsExtensions: true, resolveJsonModule: true }, ts.sys).resolvedModule?.resolvedFileName;
       if (!target || !known.has(resolve(target))) { fail(node, `Unresolved/out-of-src dependency: ${specifier}`); return; }
       const resolved = resolve(target); dependencies.push(resolved);
       const dest = slash(relative(root, resolved)); const other = /^modules\/([^/]+)\//.exec(dest)?.[1];
+      if (dest.endsWith('.json')) {
+        if (name.startsWith('contracts/')) fail(node, `Shared contracts must not import content: ${dest}`);
+        if (other && other !== module) fail(node, `Use the public module API instead of content deep import: ${dest}`);
+        if (module && !dest.startsWith(`modules/${module}/assets/`)) fail(node, `Read only owning module assets: ${dest}`);
+        return;
+      }
       if (module && !dest.startsWith(`modules/${module}/`) && !dest.startsWith('contracts/') && !other) fail(node, `Domain cannot import application/adapter: ${dest}`);
       if (other && other !== module && dest !== `modules/${other}/index.ts`) fail(node, `Use the public module API instead of deep import: ${dest}`);
       if (name.startsWith('contracts/') && !dest.startsWith('contracts/')) fail(node, `Shared contracts must not import implementations: ${dest}`);
