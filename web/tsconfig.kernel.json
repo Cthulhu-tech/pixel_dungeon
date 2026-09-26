@@ -22,6 +22,7 @@
     "src/types/grid/visibility.d.ts",
     "src/types/turns/scheduler.d.ts",
     "src/modules/turns/index.ts",
-    "src/types/turns/continuations.d.ts"
+    "src/types/turns/continuations.d.ts",
+    "src/types/grid/navigation.d.ts"
   ]
 }

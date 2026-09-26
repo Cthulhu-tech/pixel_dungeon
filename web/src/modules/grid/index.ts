@@ -12,3 +12,4 @@ export const NEIGHBOURS8: readonly number[] = Object.freeze([
 export { GridPathFinder } from './GridPathFinder.ts';
 export { GridBallistica } from './GridBallistica.ts';
 export { GridShadowCaster } from './GridShadowCaster.ts';
+export { GridNavigation } from './GridNavigation.ts';

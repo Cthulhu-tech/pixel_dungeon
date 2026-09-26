@@ -1,60 +1,61 @@
 # Grid / Клеточное ядро
 
-## Владелец и публичная граница
+## Ответственность и публичная граница
 
-Модуль содержит исходные Level constants, GridPathFinder, GridBallistica и GridShadowCaster.
-Runtime API — index.ts, type-only contracts — types/grid/*.d.ts. Нет Phaser/DOM/stores,
-таймеров, глобальных mutable buffers и владельца всей игры. Чистая внешняя зависимость —
-compatibility/index.ts:toJavaInt для escape arithmetic. mask.ts — единое внутреннее чтение
-boolean flags с исходной ошибкой bounds, не schema validator.
+Public runtime API — index.ts: исходные Level constants, GridPathFinder, GridBallistica,
+GridShadowCaster и GridNavigation. Type-only contracts — types/grid/*.d.ts. Нет Phaser,
+DOM, XState/stores, timers или общего изменяемого мира. Чистая зависимость —
+compatibility.toJavaInt для escape arithmetic. mask.ts переиспользуется внутри grid.
 
-GridPathFinder владеет distance/goals/queue экземпляра. find/getStep/getStepBack и
-buildDistanceMap сохраняют source ordering, bounded queue и failures. Passability принадлежит
-вызывающему владельцу; distanceAt/copyDistanceMap — readonly query/detached projection.
-Equal-area reshape, stale map на from==to и flattened adjacency сохранены. Dungeon-level
-occupancy/visible/flying/avoid composition ещё не подключена.
+GridPathFinder владеет distance/goals/queue: exact path/step/flee, limits, source ordering
+и bounded failures. GridBallistica владеет trace/distance; world flags/hasCharacter поступают
+через порт. GridShadowCaster владеет scratch intervals/derived rounding, output принадлежит
+вызывающему владельцу. Оригинальные float32/callback-independent algorithms не заменены.
 
-GridBallistica владеет trace/distance. cast получает query-only PDBallisticaWorld; traceAt/
-copyTrace не создают второй live owner. Сохраняются duplicate target, magic continuation,
-wall rollback, short-circuit occupancy, failed-write increment и stale tail.
+**GridNavigation** переносит Dungeon.findPath/flee вокруг внедрённого PDNavigationPathfinder.
+Единственное собственное состояние — reusable working mask. PDNavigationActor предоставляет
+flight/buff queries, PDNavigationWorld — avoid/occupancy/ordered character positions.
+Обычные pass/visible masks приходят параметрами. Backend получает synchronous borrow рабочей
+маски: хранить её как live world state после вызова нельзя.
 
-GridShadowCaster владеет scratch obstacle intervals и derived rounding table. castShadow
-получает x/y, output Uint8Array, int distance0–8 и blocker mask. Output — явно переданная
-изменяемая проекция, отдельный blocker не мутируется. Сохраняются восемь секторов, float32
-endpoints, row-delayed occlusion, radius0 и invalid-radius behavior.
+Adjacent path сохраняет исходную проверку линейного difference и occupancy независимо от
+visibility; избегаемая клетка допускается даже без flight. Общий find разрешает avoid при
+flight/Amok/Rage, flee — только при flight и восстанавливает текущую клетку. Невидимые actors
+не исключаются из общей mask. Порядок queries и flags short-circuit сохранён.
 
-Constructors требуют положительные целые dimensions. Ballistica/ShadowCaster parity
-проверена на исходных32×32, не на всех произвольных размерах. Canonical actor position —
-actors; derived Actor.chars lookup теперь перенесён в turns. Grid получает его через
-query port, не создаёт второй occupancy index. Integration с buffs/AI/Level ещё открыта.
+Canonical position — actors; derived Actor.chars lookup — turns. Grid использует публичный
+порт, не копирует occupancy. В тесте подключён настоящий TurnScheduler, но реальные
+Hero/Mob/buff owners и сцены пока не интегрированы. Параметры dimensions должны совпадать
+с backend; доказательство Ballistica/ShadowCaster/navigation относится к исходным 32×32.
 
 ## Проверки и переносимость
 
-| Команда | Подсистемный результат |
+| Подсистема | Evidence |
 | --- | --- |
-| test:parity:pathfinding | 5/5 tests, 5460 independent Java cases |
-| test:parity:ballistics | 6/6 tests, 9150 cases |
-| test:parity:visibility | 6/6 tests, 8260 cases |
-| test:parity:kernel / test:kernel | Актуальный общий состав и totals: docs/port/STATUS.md |
+| PathFinder | 5/5 tests, 5460 original-Java cases |
+| Ballistica | 6/6 tests, 9150 cases |
+| ShadowCaster | 6/6 tests, 8260 cases |
+| Navigation policy | 6/6 tests, 5776 selected-original-method cases |
 
-Исходные algorithm files hash-checked. Test-only Java Level/Actor supply inputs, не
-подменяют алгоритмы и не доказывают whole Android integration. Expected вычисляет Java.
-Typecheck/extraction проходят без DOM/adapters/остальных globals. Grid зависит только от
-compatibility; общий kernel host дополнительно содержит turns и его declarations.
-Node22.16.0/JDK21.0.11/доступный TS5.8.3; полный package.json-набор не установлен.
+Original full-file algorithms hash-checked. Navigation fixture содержит выбранные исходные
+методы в test-only shell с отдельным hash/provenance, а не полный Dungeon.java. Actor/Level
+adapters дают входы; они не доказывают production Android compatibility.
+Актуальные глобальные totals/команды — docs/port/STATUS.md, не дублируются в README.
 
-Для выноса grid: modules/grid, modules/compatibility, types/grid, types/compatibility,
-сохранение GPL. Runtime scratch освобождается с экземпляром; нет ресурсов для фиктивного dispose.
-Mappings: docs/port/features/pathfinding.md, ballistics.md, visibility.md.
+Вынос grid требует modules/grid, modules/compatibility и только их declarations/licenses;
+world/actor/pathfinder ports связывает вызывающий host. Общий kernel extraction дополнительно
+проверяет turns. Отдельный headless запуск не требует DOM или framework dependencies.
+Проверено Node22.16.0/JDK21.0.11/доступным TS5.8.3; full npm set/build не подтверждены.
 
 ## English
 
-Pure instance-owned ports preserve original pathfinding, ballistic and shadow-casting
-algorithms, not substitutes from A*/navcat/FOV libraries. Caller masks and actor/world
-ownership remain separate. Shadow intervals use explicit float32 steps and original row
-semantics; radius zero and failure-before-clear behavior match the source.
+Grid ports preserve original path, trajectory, visibility and movement-policy semantics.
+GridNavigation owns only a reusable scratch mask and queries actor/world owners through
+narrow ports. It retains adjacent fast paths, flight/buff asymmetry, visible-only occupancy
+filtering, original query order and failure behavior. Pathfinding remains the previously
+ported algorithm. The real scheduler is exercised through its public occupancy API in a
+contract scenario; production actors and gameplay presentation remain unimplemented.
 
-Grid extraction requires only this module, compatibility and their ambient contracts.
-The larger kernel host additionally verifies turns. Each subsystem's Java matrix passes;
-current global totals are recorded only in STATUS.md to avoid stale repeated progress.
-Production world/actor integration, full app build and browser evidence remain open.
+Source provenance and scope are in docs/port/features/{pathfinding,ballistics,visibility,
+navigation}.md. Navigation uses selected original Java method bodies in an explicit test
+shell, not a complete original Dungeon build. This distinction is not hidden by passed tests.
