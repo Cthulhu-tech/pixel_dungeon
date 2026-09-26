@@ -1,53 +1,47 @@
-import { mkdirSync, mkdtempSync, writeFileSync, rmSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, writeFileSync, rmSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { spawnSync } from 'node:child_process';
+import { createHash } from 'node:crypto';
 
-// Diagnostic only. Published records choose candidates; application pins never change here.
+// Explicit diagnostic, NOT acceptance or a silent package downgrade.
 const root=fileURLToPath(new URL('../../',import.meta.url));
 const scratch=join(root,'tmp');mkdirSync(scratch,{recursive:true});
 const compiler=fileURLToPath(import.meta.resolve('typescript/bin/tsc'));
-const cases=[],discovery=[];
-async function versions(name,major){
-  const response=await fetch('https://registry.npmjs.org/'+encodeURIComponent(name),{signal:AbortSignal.timeout(30000)});
-  if(!response.ok)throw new Error(`${name}: HTTP ${response.status}`);
-  const data=await response.json();
-  if(data.name!==name||!data.versions)throw new Error(`${name}: missing package identity/versions`);
-  return Object.keys(data.versions).filter(v=>new RegExp(`^${major}\\.\\d+\\.\\d+$`).test(v))
+const results=[],discovery=[];
+try {
+  const response=await fetch('https://registry.npmjs.org/xstate',{signal:AbortSignal.timeout(30000)});
+  if(!response.ok)throw new Error(`xstate: HTTP ${response.status}`);
+  const metadata=await response.json();
+  if(metadata.name!=='xstate'||!metadata.versions)throw new Error('Missing xstate version identity');
+  const versions=Object.keys(metadata.versions).filter(v=>/^4\.\d+\.\d+$/.test(v))
     .sort((a,b)=>{const x=a.split('.').map(Number),y=b.split('.').map(Number);return y[1]-x[1]||y[2]-x[2];});
-}
-try {
-  const published=await versions('xstate',5);
-  const candidates=[33,32,30,25,20,19,18,11,5,0].map(minor=>published.find(v=>Number(v.split('.')[1])===minor)).filter(Boolean);
-  discovery.push({name:'xstate',candidates});
-  for(const version of candidates)cases.push({name:'xstate-'+version,dependencies:{xstate:version},
-    code:"import { createMachine, createActor } from 'xstate'; export const actor = createActor(createMachine({initial:'ready',states:{ready:{}}}));"});
-} catch(error){discovery.push({name:'xstate',error:String(error)});}
-try {
-  const published=await versions('phaser4-rex-plugins',4);
-  const candidates=[2,1,0].map(minor=>published.find(v=>Number(v.split('.')[1])===minor)).filter(Boolean);
-  discovery.push({name:'phaser4-rex-plugins',candidates});
-  const imports={full:'templates/ui/ui-plugin.js',label:'templates/ui/label/Label.js',button:'plugins/button.js'};
-  for(const version of candidates)for(const [part,path] of Object.entries(imports))cases.push({
-    name:`phaser4.1-rex${version}-${part}`,dependencies:{phaser:'4.1.0','phaser4-rex-plugins':version},
-    code:`import Phaser from 'phaser'; import Component from 'phaser4-rex-plugins/${path}'; export const component=Component; export const scene=new Phaser.Scene('probe');`,
-  });
-} catch(error){discovery.push({name:'phaser4-rex-plugins',error:String(error)});}
-const results=[];
-for(const entry of cases){
-  const host=mkdtempSync(join(scratch,'types-probe-'));
-  try{
-    writeFileSync(join(host,'package.json'),JSON.stringify({private:true,type:'module',dependencies:entry.dependencies},null,2)+'\n');
-    writeFileSync(join(host,'probe.ts'),entry.code+'\n');
-    writeFileSync(join(host,'tsconfig.json'),JSON.stringify({compilerOptions:{target:'ES2022',module:'ESNext',moduleResolution:'Bundler',lib:['ES2022','DOM'],types:[],strict:true,exactOptionalPropertyTypes:true,noUncheckedIndexedAccess:true,noEmit:true},files:['probe.ts']},null,2)+'\n');
-    const install=spawnSync('npm',['install','--ignore-scripts','--no-audit','--no-fund'],{cwd:host,encoding:'utf8',timeout:180000,env:{...process.env,PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD:'1'}});
-    if(install.error||install.status!==0){results.push({name:entry.name,dependencies:entry.dependencies,installation:'FAILED',error:String(install.error??install.stderr)});continue;}
-    const check=spawnSync(process.execPath,[compiler,'-p',join(host,'tsconfig.json')],{cwd:host,encoding:'utf8',timeout:30000});
-    if(check.error)throw check.error;
-    results.push({name:entry.name,dependencies:entry.dependencies,installation:'PASS',typecheckExit:check.status,diagnostics:check.stdout.replaceAll(host,'<probe>'),stderr:check.stderr});
-  }catch(error){results.push({name:entry.name,error:String(error)});}finally{rmSync(host,{recursive:true,force:true});}
-}
+  const candidates=[...new Set(versions.map(v=>v.split('.')[1]))].slice(0,2).map(minor=>versions.find(v=>v.split('.')[1]===minor));
+  discovery.push({name:'xstate',major:4,candidates});
+  for(const version of candidates){
+    const host=mkdtempSync(join(scratch,'types-probe-'));
+    try{
+      const dependencies={phaser:'4.1.0','phaser4-rex-plugins':'4.2.0',xstate:version};
+      writeFileSync(join(host,'package.json'),JSON.stringify({private:true,type:'module',dependencies},null,2)+'\n');
+      writeFileSync(join(host,'probe.ts'),"import Phaser from 'phaser';\nimport Button from 'phaser4-rex-plugins/plugins/button.js';\nimport {createMachine,interpret} from 'xstate';\nexport const service=interpret(createMachine({initial:'ready',states:{ready:{}}}));\nexport const component=Button;\nexport const scene=new Phaser.Scene('probe');\n");
+      writeFileSync(join(host,'tsconfig.json'),JSON.stringify({compilerOptions:{target:'ES2022',module:'ESNext',moduleResolution:'Bundler',lib:['ES2022','DOM'],types:[],strict:true,exactOptionalPropertyTypes:true,noUncheckedIndexedAccess:true,noEmit:true},files:['probe.ts']},null,2)+'\n');
+      const install=spawnSync('npm',['install','--ignore-scripts','--no-audit','--no-fund'],{cwd:host,encoding:'utf8',timeout:180000,env:{...process.env,PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD:'1'}});
+      if(install.error||install.status!==0)throw new Error(String(install.error??install.stderr));
+      const check=spawnSync(process.execPath,[compiler,'-p',join(host,'tsconfig.json')],{cwd:host,encoding:'utf8',timeout:30000});
+      if(check.error)throw check.error;
+      const row={name:'phaser4.1-rexbutton-xstate'+version,dependencies,typecheckExit:check.status,diagnostics:check.stdout.replaceAll(host,'<probe>'),stderr:check.stderr};
+      if(check.status===0){
+        const archive=join(scratch,'compatible-probe-inputs.tar.gz');
+        const tar=spawnSync('tar',['-czf',archive,'node_modules','package-lock.json','package.json','probe.ts','tsconfig.json'],{cwd:host,encoding:'utf8',timeout:30000});
+        if(tar.error||tar.status!==0)throw new Error(String(tar.error??tar.stderr));
+        row.archiveSha256=createHash('sha256').update(readFileSync(archive)).digest('hex');
+        results.push(row);break;
+      }
+      results.push(row);
+    }catch(error){results.push({version,error:String(error)});}finally{rmSync(host,{recursive:true,force:true});}
+  }
+}catch(error){discovery.push({error:String(error)});}
 const report={scope:'DIAGNOSTIC_ONLY_NOT_APPLICATION_ACCEPTANCE',applicationPinsChanged:false,discovery,results};
 writeFileSync(join(scratch,'dependency-type-probe.json'),JSON.stringify(report,null,2)+'\n');
 console.log(JSON.stringify(report,null,2));
-if(results.some(r=>r.error||r.installation==='FAILED')||discovery.some(r=>r.error))process.exitCode=1;
+if(results.some(r=>r.error)||discovery.some(r=>r.error))process.exitCode=1;
