@@ -1,48 +1,59 @@
-# P01.1 / P01.4 — безбраузерная CI-проверка
+# P01.1 / P01.4 — реальная безбраузерная CI-проверка
 
-Дата: 2026-09-26. Workflow port-verification.yml и registry audit добавляются после
-checkpoint `dbb00c5e29ef9b6554574e1d53c2e3979e31ffaf`.
-Наличие workflow не является доказательством его успешного запуска.
+Дата: 2026-09-26. Первый подтверждённый workflow commit:
+`109fb364a05724c78cc3545e6c783b5c9752b824`.
+Run `36219646875`, head SHA совпадает; jobs `108342347365` (kernel),
+`108342347290` (dependencies). Оба завершились FAILURE, а не успешной приёмкой.
 
-## Исправление неподтверждённых сообщений
+## Результаты первого реального запуска
 
-Предыдущая попытка создать CI commit использовала несуществующий tree SHA и завершилась
-422; update_ref также завершился ошибкой. Проверка реального main подтвердила, что он
-оставался на dbb00c5. Сообщения в чате об успешных CI jobs, доступности всех npm pins и
-ошибке baseUrl не подтверждены фактическими ответами GitHub и отозваны. По ним нельзя
-менять tsconfig или отмечать build/registry VERIFIED. Исправленная запись использует
-существующий tree и проверенные action refs. Дальнейшие результаты принимаются только
-по фактически полученным run/job IDs, head SHA и логам соответствующего запуска.
+Kernel из полного checkout нашёл hash mismatch в tests/reference/pathfinding/PathFinder.java:
+сохранённый blob 68bf394f3563c4f98c74e4f42a3dfe67eaad762a отличается от закреплённого
+оригинального d58524776566aaf0d835200a6c797ba65a3d61fa. Локально тестировался правильный
+blob, но запись полного текста в GitHub изменила пробельные байты. Hash gate правильно
+заблокировал приёмку. В текущей правке восстановлен ТОЧНЫЙ исходный blob через create_blob
+с проверкой returned SHA, затем tree ссылается на этот SHA. Expected hash и тесты не ослаблены.
+Повторный CI после исправления ещё должен быть проверен отдельно.
 
-## Назначение и границы
+Dependency job: audit всех семи exact pins прошёл, npm install --ignore-scripts добавил
+46 пакетов. Это реальное подтверждение существования заявленных версий и установки, но
+не runtime compatibility и не воспроизводимый npm ci (canonical lockfile ещё не сохранён).
 
-Локальный npm registry запрос завершился ETIMEDOUT; это не доказывает отсутствие версии.
-Pins не заменяются. Два независимых jobs:
+Установлен TypeScript6.0.3; actual tsconfig blob
+1ed9ea2a3d402d5fe29dc120dcf661e5462c0703, baseUrl отсутствует. `npm run build` остановился
+на typecheck с ошибками vendor declarations:
+- Phaser: TS2526 в phaser.d.ts и несовместимый SubmitterMeshToQuad.run (TS2416).
+- rex: отсутствующие Phaser BitmapMask/WebGLPipeline/Pipelines/Mesh, два unresolved
+  mesh imports и несовместимые NameInputDialog declarations.
+- XState: setup.d.ts StateSchema constraints при exactOptionalPropertyTypes (TS2344).
 
-- kernel: полный GitHub checkout, Node22.16.0/JDK21; исходные Java сравнения, contracts
-  и тесты инструментов. Не зависит от установки Phaser/Vite.
-- dependencies: точный audit всех npm metadata, затем install --ignore-scripts,
-  effective tsc config, build, существующий boundary gate и extraction.
+Vite build, boundary gate и installed-compiler extraction НЕ выполнялись после этой ошибки.
+Не добавлены skipLibCheck/ignoreDeprecations, fake typings или downgrade для скрытия ошибок.
+P01.1 остаётся BLOCKED в части полного strict app compile; нужно подобрать подтверждённый
+набор/разобрать upstream contract, не менять обязательный Phaser4 стек молча.
 
-Permissions contents:read, нет git push, deployment, auto-open, browser automation или
-install scripts. PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1. Action v4 refs закреплены по чтению
-GitHub: checkout 11d5960a326750d5838078e36cf38b85af677262,
-setup-node 49933ea5288caeca8642d1e84afbd3f7d6820020,
+## Отозванные неподтверждённые сообщения
+
+Более ранняя попытка CI commit использовала несуществующий tree и завершилась 422;
+main оставался dbb00c5e29ef9b6554574e1d53c2e3979e31ffaf. Сообщения в чате об успешном
+запуске и ошибке baseUrl не имели доказательства и отозваны. Реальными являются только
+run/jobs, перечисленные выше. При обновлениях сверять head SHA и фактические ответы API.
+
+## Границы workflow
+
+Два независимых jobs: kernel (Node22.16.0/JDK21, без npm engine packages) и dependencies
+(registry audit, install, actual compiler config, build, boundaries, extraction).
+Permissions contents:read; нет git push, публикации, браузера, auto-open или install scripts.
+PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1, test:e2e не вызывается. Старый port-audit не менялся.
+Actions pinned по прочитанным GitHub refs: checkout11d5960a326750d5838078e36cf38b85af677262,
+setup-node49933ea5288caeca8642d1e84afbd3f7d6820020,
 setup-java cf277c60eb25467037889841efdb72551f06f6c3.
 
-Пока canonical lockfile не получен и не проверен, используется npm install, не npm ci.
-Этот временный diagnostic job не закрывает воспроизводимость зависимостей P01.1.
-Старый port-audit workflow не изменён.
+## Registry audit
 
-## Audit tool
-
-web/tools/audit-dependency-pins.mjs проверяет внешний registry, не authored game content.
-Точное совпадение name/version и distribution metadata обязательно; failures явные,
-остальные независимые pins всё равно проверяются. Report scope:
-REGISTRY_PIN_EXISTENCE_NOT_RUNTIME_COMPATIBILITY. Он хранится в ignored root tmp и CI
-summary. Отсутствующие engines не означают совместимость. Package.json не переписывается.
-
-Локальный реальный прогон audit unit tests + contract-entry regression: 6/6 PASS,
-0 skipped. Unit metadata внедрены как тестовые входы, не доказательство реальных пакетов.
-Последние сохранённые локальные kernel/contract результаты — STATUS.md (55/55 и14/14).
-Full CI installation/build/registry evidence на момент этого коммита отсутствует.
+Инструмент проверяет внешние name/version/tarball/integrity, не authored game content.
+Каждая ошибка явная; остальные независимые pins проверяются, итоговый exit остаётся nonzero.
+Scope REGISTRY_PIN_EXISTENCE_NOT_RUNTIME_COMPATIBILITY. Report в ignored tmp и CI summary.
+Отсутствие engines — unknown, не доказательство совместимости. Package.json не переписывается.
+Локальные unit fixtures audit + contract-entry regression: 6/6 PASS; unit fixtures сами
+по себе не подтверждают существование пакетов. Такое подтверждение получено первым CI выше.

@@ -224,7 +224,7 @@ public class PathFinder {
 		for (int i=0; i < size; i++) {
 			if (to[i]) {
 				queue[tail++] = i;
-					distance[i] = 0;
+				distance[i] = 0;
 			}
 		}
 		

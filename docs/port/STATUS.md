@@ -1,94 +1,86 @@
 # Фактический статус переноса
 
-Обновлено 2026-09-26. Продолжение: задача за задачей, без повторных запросов подтверждения.
-PLAN P00–P10 — единственная очередь. Полной играбельной браузерной игры ещё нет.
+Обновлено 2026-09-26. Работа последовательно по PLAN P00–P10; подтверждение между задачами
+не требуется. Полной играбельной браузерной игры пока нет.
 
-## Семь выполненных участков продолжения
+## Реализованные участки
 
-| Участок | Реализация | Фактическая проверка |
+| Участок | Реализация | Последнее локальное evidence |
 | --- | --- | --- |
-| Random | Все 16 wrapper operations; collection order explicit | 13/13 tests, 9242 Java cases |
-| PathFinder | Exact path/step/flee и distance maps | 5/5 tests, 5460 cases |
-| Ballistica | Trace/collision/magic/hitChars/query order | 6/6 tests, 9150 cases |
-| ShadowCaster | Eight-sector visibility с float32 intervals | 6/6 tests, 8260 cases |
-| Actor scheduler | Clocks/current/hooks/membership/IDs/occupancy | 6/6 tests, 106 scenarios / 4129 checkpoints |
-| Continuation gate | Stale/duplicate/foreign callback guard и cancellation | 13/13 contracts, включая 1000 completions |
-| Navigation policy | Dungeon.findPath/flee: flight/buffs/avoid/visible actors | 6/6 tests, 5776 selected-original-method cases |
+| Random | Все 16 wrapper operations, порядок коллекций — явный вход | 13 tests / 9242 Java cases |
+| PathFinder | Точный путь/шаг/отступление и карты расстояний | 5 tests / 5460 cases |
+| Ballistica | Траектории, столкновения, trace и порядок queries | 6 tests / 9150 cases |
+| ShadowCaster | Восемь секторов, float32-углы, видимость | 6 tests / 8260 cases |
+| Actor scheduler | Время, очередь, hooks, ID и производный occupancy | 6 tests / 106 сценариев / 4129 checkpoints |
+| Continuations | Защита от старых/повторных/чужих callbacks и отмена | 13 contracts, включая 1000 completions |
+| Navigation policy | Dungeon.findPath/flee с flight/buffs/avoid/visible actors | 6 tests / 5776 selected-method cases |
 
-Числа случаев не являются процентом готовности. Java full-file algorithms дают 32112 cases;
-navigation — ещё 5776 сравнений выбранных исходных методов в test-only shell; scheduler —
-4129 последовательных checkpoints. Continuation safety tests не считаются Java comparisons.
+Локальный `npm run test:kernel`: 55/55 PASS, 0 skipped; `test:contracts`: 14/14 PASS.
+Это пересекающиеся наборы, не 69 уникальных tests. Java full-file algorithms: 32112 cases;
+selected navigation methods: 5776; scheduler: 4129 последовательных checkpoints.
+Количество cases не является процентом готовности игры.
 
-## Последний прогон
+Scoped kernel typecheck и extraction compatibility/turns/kernel локально прошли на TS5.8.3.
+Каждый host включает только нужные modules/declarations, без DOM и посторонних globals.
+Contract runner исправлен после реального ERR_UNKNOWN_FILE_EXTENSION; regression 1/1 PASS.
+Новый registry-audit unit suite: 5/5 PASS. Подробные отчёты находятся в features/.
 
-| Команда из web | Результат |
-| --- | --- |
-| `npm run test:kernel` | **55/55 PASS**, 0 skipped |
-| `npm run test:contracts` | **14/14 PASS**, 0 skipped |
-| `npm run test:parity:navigation` | **6/6 PASS**, 5776 comparisons после последнего уточнения теста |
-| `node --test tools/contracts-entrypoint.test.mjs` | Ранее в этой сессии 1/1 PASS; общий contract runner проверен реально |
-| `npm run typecheck:kernel` | PASS, strict без DOM |
-| `npm run check:extraction:kernel` | PASS; только compatibility/grid/turns и собственные .d.ts |
+## Реальный CI — выявленные проблемы
 
-Отдельные compatibility/turns extraction тоже проходили на предыдущем checkpoint этой
-сессии; их код не менялся в navigation. 55 kernel и 14 contracts пересекаются, не складывать
-как уникальные tests. Источник прогонов — восстановленные относящиеся файлы, не полный clone.
+CI добавлен в main commit 109fb364a05724c78cc3545e6c783b5c9752b824.
+Подтверждённый run36219646875: kernel job108342347365 и dependencies job108342347290.
+**Первый CI завершился с ошибками. Его нельзя описывать как successful run.**
 
-Общий test:contracts исправлен после воспроизведённого ERR_UNKNOWN_FILE_EXTENSION на Node22.16.0:
-добавлен TS stripping, проверены целевой и общий npm входы. Regression проверяет фактический
-запуск, не принимает пустой/skipped вывод. Details: features/contract-runner.md.
+Kernel: hash gate обнаружил, что записанный PathFinder.java reference не совпадает с
+локально проверенным оригиналом. В текущем исправлении восстановлен blob
+`d58524776566aaf0d835200a6c797ba65a3d61fa` byte-for-byte; expected не менялся.
+Результат повторного CI ещё не установлен. Остальные исходные Java/ассеты не изменялись.
 
-## Commits и evidence
+Dependencies: все 7 exact pins FOUND, npm install --ignore-scripts успешно добавил46 пакетов.
+Установленный compiler — TS6.0.3. **Общий typecheck не проходит:** ошибки собственных
+деклараций Phaser/rex/XState. Vite build, общий boundary gate и installed-compiler extraction
+после этого не исполнялись. См. features/ci.md для классов ошибок. Type safety не отключалась.
+Canonical lockfile ещё не сохранён; установку нельзя называть воспроизводимым npm ci.
 
-Random `3777e64296e2a87b52bf2812702d9909ddfb79a2`;
-PathFinder `b9f21257bdad022d411b1795455ea30753fab398`;
-Ballistica `03aae50995bc979ada87d90ab50af32357d6f703`;
-ShadowCaster `0984d661d020024db472a78c919b65c39b21311a`;
-Actor `322c57649392fc4dc28f1419ce2dba6c537e7225`;
-continuations + contract runner `3e9acd6da3c763a3c3b6393be2733e21460e1172`;
-navigation — текущий атомарный набор.
-Reports: features/random.md, pathfinding.md, ballistics.md, visibility.md, turns.md,
-continuations.md, navigation.md. File-level source-map ещё требует aggregation с ними.
+Предыдущие сообщения об успешном CI и baseUrl были неподтверждёнными и отозваны.
+Actual tsconfig в реальном CI не содержит baseUrl. Источник истины — приведённые run/job/head
+и их логи, а не предварительное описание. Расхождение локальных/репозиторных bytes выявил CI.
 
-## Границы доказательства
+## Commits и происхождение
 
-Random/PathFinder/Ballistica/ShadowCaster/Actor reference files byte-identical pinned blobs.
-Navigation reference сохраняет выбранные method bodies Dungeon/Level/BArray, но меняет
-class/package оболочку для изолированного oracle; это явно описано, не whole Dungeon build.
-Test-only bindings задают inputs и наблюдают queries, PathFinder делегируется оригиналу.
+Random3777e64296e2a87b52bf2812702d9909ddfb79a2;
+PathFinder b9f21257bdad022d411b1795455ea30753fab398;
+Ballistica03aae50995bc979ada87d90ab50af32357d6f703;
+ShadowCaster0984d661d020024db472a78c919b65c39b21311a;
+Actor322c57649392fc4dc28f1419ce2dba6c537e7225;
+continuations/runner3e9acd6da3c763a3c3b6393be2733e21460e1172;
+navigation dbb00c5e29ef9b6554574e1d53c2e3979e31ffaf.
 
-В Actor oracle порядок коллекции задан LinkedHashSet через reflection: это НЕ универсальная
-эмуляция Android HashSet/identity hash. Production collection owners и полный draw schedule
-не закрыты. Primitive Bundle adapter не является save codec. Истинные Char/Hero/Mob/AI/buffs
-не подменяются scripted test actors и пока не объявлены реализованными.
+Source baseline ce7f241515fd5c040fcf18b4beb5b7a49d9d535f, PD-classes
+c0b690a4163020963e70a58a7d4f27965dc8f134 неизменны. Navigation oracle содержит выбранные
+исходные методы в test-only shell, не весь Dungeon. Actor oracle задаёт порядок
+LinkedHashSet через reflection, не доказывает Android HashSet identity order.
+Test-only neighbors — входные adapters, не игровые Char/Level/Bundle replacements.
 
-GridNavigation уже проверяет реальное соединение с TurnScheduler.findChar/list через ports,
-но не перемещает sprite и не тратит ходы. Canonical position остаётся actors, derived chars
-index — turns. Gate acknowledge вызывает next, не process; cancel не означает успешный ход.
-Source behavior/quirks, ошибки и порядок side effects сохраняются без нового баланса.
+Canonical position остаётся actors; Actor.chars lookup — turns; grid получает query port.
+Gate acknowledgment вызывает next, не process/урон; отмена не означает успешный ход.
+Настоящие персонажи/бой и связь с Phaser ещё не реализованы этими тестовыми сценариями.
 
-## Окружение и незакрытые gates
+## Открытые задачи
 
-Реальные прогоны: Node22.16.0/npm10.9.2/JDK21.0.11/доступный TypeScript5.8.3.
-Project dependencies не менялись и не устанавливались целиком; TS6.0.3 compatibility не доказана.
-GitHub DNS препятствует полному clone; относящиеся тексты восстановлены через connector.
+- P00.1/P00.2: semantic completeness и aggregation features в существующий source-map.
+- P00.3–P00.6: full original Android build, production collection order, RNG schedule,
+  saves/clocks и оставшиеся callback paths.
+- P01.1: strict compiler compatibility установленных зависимостей; canonical lockfile.
+- P01-RULES: старые type imports/контракты scaffold, shaders и полные policy gates.
+- P02/P03: реальные Char/Hero/Mob/buffs/Level, production RNG/checkpoint и callback wiring.
+- P04–P10: полный content/UI/save/visual parity NOT_VERIFIED.
 
-Не выполнены: full app typecheck/build/architecture gate, полный inventory replay, whole
-Android/PD-classes build, human browser visual/input/audio acceptance. Браузер не запускался
-и не автоматизировался. test:e2e — blocker/exit2; общий test:parity не выдаёт ложный full PASS.
+Локально Node22.16.0/npm10.9.2/JDK21.0.11/TS5.8.3; полный clone не доступен из-за DNS,
+работа шла с восстановленными относящимися файлами. Реальный CI использует полный checkout
+и подтвердил установку packages; это не отменяет его ошибок и не доказывает browser behavior.
 
-## Открытая работа PLAN
-
-P00.1/P00.2: semantic completeness и aggregation evidence в существующий inventory/source-map.
-P00.3–P00.5: whole original runtime compatibility при работающих subsystem oracles.
-P00.6: production collection order, RNG consumption, saves/clocks/callbacks.
-P01/P01-RULES: full toolchain/lockfile, старые type imports, shaders и остальные policy gates.
-P02/P03: настоящие characters/combat/buffs/Level, production RNG/checkpoint и callback wiring.
-P04–P10: полный content/UI/save/visual parity NOT_VERIFIED. Не закрывать whole-file по одной функции.
-
-Baseline `ce7f241515fd5c040fcf18b4beb5b7a49d9d535f` и PD-classes
-`c0b690a4163020963e70a58a7d4f27965dc8f134` сохранены. Предшествующий checkpoint продолжения
-`93aa9b7dba5e78fbe7e471ce49f137e839ffb8ce`; ранее existing inventory/web и PLAN/rules не обнулялись.
+Браузер не запускался/не автоматизировался; visual/input/audio acceptance ручная и пока
+отсутствует. test:e2e — blocker/exit2, общий test:parity не выдаёт ложный full PASS.
 Исходные src/assets/res/AndroidManifest/LICENSE не менялись. Runtime — web, references —
-tests/reference, oracle — tools/port, scratch — root tmp с очисткой временных hosts.
-Нового арта, игровых заглушек, reset старой работы, dependency downgrade или browser запуска нет.
+tests/reference, oracle — tools/port, scratch — ignored root tmp; временные hosts удаляются.
