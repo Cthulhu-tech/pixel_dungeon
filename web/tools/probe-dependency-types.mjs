@@ -3,31 +3,36 @@ import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { spawnSync } from 'node:child_process';
 
-// Diagnostic only: never changes application pins or accepts an incompatible build.
+// Diagnostic only. Published records choose candidates; application pins never change here.
 const root=fileURLToPath(new URL('../../',import.meta.url));
 const scratch=join(root,'tmp');mkdirSync(scratch,{recursive:true});
 const compiler=fileURLToPath(import.meta.resolve('typescript/bin/tsc'));
-const cases=[
-  {name:'phaser-4.0.0',dependencies:{phaser:'4.0.0'},code:"import Phaser from 'phaser'; export const scene = new Phaser.Scene('probe');"},
-  {name:'phaser-4.1.0',dependencies:{phaser:'4.1.0'},code:"import Phaser from 'phaser'; export const scene = new Phaser.Scene('probe');"},
-  {name:'phaser-4.2.1',dependencies:{phaser:'4.2.1'},code:"import Phaser from 'phaser'; export const scene = new Phaser.Scene('probe');"},
-];
-async function latest(name,major){
-  const response=await fetch('https://registry.npmjs.org/'+encodeURIComponent(name)+'/latest',{signal:AbortSignal.timeout(30000)});
+const cases=[],discovery=[];
+async function versions(name,major){
+  const response=await fetch('https://registry.npmjs.org/'+encodeURIComponent(name),{signal:AbortSignal.timeout(30000)});
   if(!response.ok)throw new Error(`${name}: HTTP ${response.status}`);
   const data=await response.json();
-  if(data.name!==name||typeof data.version!=='string'||!data.version.startsWith(major+'.'))throw new Error(`${name}: unexpected latest identity/major`);
-  return data.version;
+  if(data.name!==name||!data.versions)throw new Error(`${name}: missing package identity/versions`);
+  return Object.keys(data.versions).filter(v=>new RegExp(`^${major}\\.\\d+\\.\\d+$`).test(v))
+    .sort((a,b)=>{const x=a.split('.').map(Number),y=b.split('.').map(Number);return y[1]-x[1]||y[2]-x[2];});
 }
-const discovery=[];
-for(const [name,major] of [['xstate',5],['phaser4-rex-plugins',4]]){
-  try{
-    const version=await latest(name,major);discovery.push({name,version});
-    cases.push(name==='xstate'?
-      {name:'xstate-'+version,dependencies:{xstate:version},code:"import { createMachine } from 'xstate'; export const machine = createMachine({initial:'ready',states:{ready:{}}});"}:
-      {name:'rex-full-'+version,dependencies:{phaser:'4.2.1',[name]:version},code:"import Phaser from 'phaser'; import RexUI from 'phaser4-rex-plugins/templates/ui/ui-plugin.js'; export const plugin = RexUI; export const scene = new Phaser.Scene('probe');"});
-  }catch(error){discovery.push({name,error:String(error)});}
-}
+try {
+  const published=await versions('xstate',5);
+  const candidates=[33,32,30,25,20,19,18,11,5,0].map(minor=>published.find(v=>Number(v.split('.')[1])===minor)).filter(Boolean);
+  discovery.push({name:'xstate',candidates});
+  for(const version of candidates)cases.push({name:'xstate-'+version,dependencies:{xstate:version},
+    code:"import { createMachine, createActor } from 'xstate'; export const actor = createActor(createMachine({initial:'ready',states:{ready:{}}}));"});
+} catch(error){discovery.push({name:'xstate',error:String(error)});}
+try {
+  const published=await versions('phaser4-rex-plugins',4);
+  const candidates=[2,1,0].map(minor=>published.find(v=>Number(v.split('.')[1])===minor)).filter(Boolean);
+  discovery.push({name:'phaser4-rex-plugins',candidates});
+  const imports={full:'templates/ui/ui-plugin.js',label:'templates/ui/label/Label.js',button:'plugins/button.js'};
+  for(const version of candidates)for(const [part,path] of Object.entries(imports))cases.push({
+    name:`phaser4.1-rex${version}-${part}`,dependencies:{phaser:'4.1.0','phaser4-rex-plugins':version},
+    code:`import Phaser from 'phaser'; import Component from 'phaser4-rex-plugins/${path}'; export const component=Component; export const scene=new Phaser.Scene('probe');`,
+  });
+} catch(error){discovery.push({name:'phaser4-rex-plugins',error:String(error)});}
 const results=[];
 for(const entry of cases){
   const host=mkdtempSync(join(scratch,'types-probe-'));
