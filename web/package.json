@@ -34,7 +34,8 @@
     "test:kernel": "node --experimental-strip-types --test tests/parity/random.test.mjs tests/parity/random-collections.test.mjs tests/parity/pathfinding.test.mjs tests/parity/ballistics.test.mjs tests/parity/visibility.test.mjs tests/parity/turns.test.mjs tests/contracts/turn-continuations.test.mjs tests/parity/navigation.test.mjs",
     "test:e2e": "node tools/browser-check-blocked.mjs",
     "test:tools": "node --test tools/*.test.mjs",
-    "test:parity:navigation": "node --experimental-strip-types --test tests/parity/navigation.test.mjs"
+    "test:parity:navigation": "node --experimental-strip-types --test tests/parity/navigation.test.mjs",
+    "audit:dependencies": "node tools/audit-dependency-pins.mjs"
   },
   "dependencies": {
     "phaser": "4.2.1",
