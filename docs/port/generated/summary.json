@@ -1,0 +1,37 @@
+{
+  "schemaVersion": 1,
+  "baselineCommit": "ce7f241515fd5c040fcf18b4beb5b7a49d9d535f",
+  "dependencyCommit": "c0b690a4163020963e70a58a7d4f27965dc8f134",
+  "dependencyCompatibility": "UNVERIFIED",
+  "semanticCoverage": "NOT_VERIFIED",
+  "sources": [
+    {
+      "repository": "Cthulhu-tech/pixel_dungeon",
+      "commit": "ce7f241515fd5c040fcf18b4beb5b7a49d9d535f",
+      "tree": "ef7b1ef7568c2aa15c3d8c527e9e6004901e4c8a",
+      "files": 646,
+      "bytes": 4236301,
+      "byKind": {
+        "android-resource": 1,
+        "audio": 49,
+        "image": 87,
+        "java": 505,
+        "reference": 4
+      }
+    },
+    {
+      "repository": "watabou/PD-classes",
+      "commit": "c0b690a4163020963e70a58a7d4f27965dc8f134",
+      "tree": "abc08fce011fc3e6b5a3d9fdbdf8cb802a9c9b2a",
+      "files": 68,
+      "bytes": 203482,
+      "byKind": {
+        "java": 66,
+        "reference": 2
+      }
+    }
+  ],
+  "mappingStatus": {
+    "TODO": 714
+  }
+}
