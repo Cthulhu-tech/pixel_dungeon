@@ -4,6 +4,7 @@
  * Source: ce7f241515fd5c040fcf18b4beb5b7a49d9d535f.
  */
 import { readGridFlag } from './mask.ts';
+import { gridAdjacent } from './geometry.ts';
 
 /** Source movement policy around the original pathfinder; never owns actor/world state. */
 export class GridNavigation {
@@ -23,8 +24,7 @@ export class GridNavigation {
 
   findPath(actor: PDNavigationActor, from: number, to: number, pass: PDGridPassability,
     visible: PDGridPassability, world: PDNavigationWorld): number {
-    const difference = Math.abs(from - to);
-    if (difference === 1 || difference === this.width || difference === this.width + 1 || difference === this.width - 1) {
+    if (gridAdjacent(from, to, this.width)) {
       // Original adjacent fast path ignores flight/buffs and never consults visibility.
       return !world.hasCharacter(to) && (readGridFlag(pass, to) || readGridFlag(world.avoid, to)) ? to : -1;
     }

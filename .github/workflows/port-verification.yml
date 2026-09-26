@@ -87,6 +87,14 @@ jobs:
         run: |
           npm run typecheck:character
           npm run check:extraction:character
+      - name: Typecheck and extract movement, effects and shared grid
+        run: |
+          npm run typecheck:movement
+          npm run typecheck:effects
+          npm run typecheck:kernel
+          npm run check:extraction:movement
+          npm run check:extraction:effects
+          npm run check:extraction:kernel
       - name: Typecheck and build without opening a browser
         run: npm run build
       - name: Check current architecture gate
@@ -95,4 +103,3 @@ jobs:
         run: |
           npm run check:extraction:compatibility
           npm run check:extraction:turns
-          npm run check:extraction:kernel

@@ -23,6 +23,7 @@
     "src/types/turns/scheduler.d.ts",
     "src/modules/turns/index.ts",
     "src/types/turns/continuations.d.ts",
-    "src/types/grid/navigation.d.ts"
+    "src/types/grid/navigation.d.ts",
+    "src/types/grid/doors.d.ts"
   ]
 }
