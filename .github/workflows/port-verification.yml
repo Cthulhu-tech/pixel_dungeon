@@ -134,6 +134,8 @@ jobs:
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
           name: port-type-probe-${{ github.sha }}
-          path: tmp/dependency-type-probe.json
+          path: |
+            tmp/dependency-type-probe.json
+            tmp/compatible-probe-inputs.tar.gz
           retention-days: 1
           if-no-files-found: warn
