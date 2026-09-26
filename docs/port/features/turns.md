@@ -1,7 +1,9 @@
 # P00.4 / P00.5 / P02 — Actor scheduler
 
-Дата: 2026-09-26. Пятый последовательный участок текущего продолжения, в едином PLAN.
-Перенесена scheduler-семантика исходного Actor; существа/бой и renderer integration не объявляются готовыми.
+Дата: 2026-09-26. Пятый последовательный участок продолжения, в едином PLAN.
+Scheduler checkpoint: `322c57649392fc4dc28f1419ce2dba6c537e7225`.
+Затем добавлен защищённый continuation protocol: [continuations.md](continuations.md).
+Существа/бой и renderer integration не объявляются готовыми.
 
 ## Source и mapping
 
@@ -20,10 +22,11 @@ Target: web/src/modules/turns/TurnScheduler.ts, index.ts; declarations types/tur
 | add/addDelayed/remove + callbacks | исходный registration/removal order, direct buffs registration |
 | chars/occupyCell/freeCell/findChar | derived occupancy lookup в turns, не второй canonical position owner |
 | findById/all | keyed read-only query и detached membership list |
+| TICK | public TURN_TICK=1, не новая частота симуляции |
 
-Это уточняет архитектуру: derived Actor chars index принадлежит turns, grid получает query
-через порт, не создаёт дубликат. Canonical position остаётся actors. Фазы обновления lookup
-сохраняются по исходнику, а не автоматически исправляются при каждом чтении позиции.
+Derived Actor chars index принадлежит turns, grid получает query через порт, не создаёт
+дубликат. Canonical position остаётся actors. Фазы обновления lookup сохраняются по
+исходнику, а не автоматически исправляются при каждом чтении позиции.
 
 ## Oracle и пределы проверки
 
@@ -46,18 +49,25 @@ Cases: fractional/large/negative times, NaN/Infinity, repeated add/remove, init/
 spending/postpone, moving, next, death, callbacks that add/remove/move/clear, duplicate IDs,
 ID overflow, equal times, clear/current quirk и source partial state on bounds errors.
 
-Совместный kernel run: **36/36 PASS** — 32112 прежних algorithm cases + 4129 scheduler
-checkpoints. Strict kernel typecheck и separate compatibility/turns/kernel extraction прошли.
-Повторяющийся extraction host вынесен в tools/module-extraction.mjs; wrappers сохраняют
-явные owner lists. Для standalone turns не копируются grid, compatibility или чужие globals.
+На scheduler checkpoint общий Java kernel дал **36/36 PASS**: 32112 прежних algorithm
+cases + 4129 scheduler checkpoints. После добавления activeRevision весь Java набор
+повторно прошёл; вместе с 13 continuation contracts — 49/49 PASS. Актуальный глобальный
+отчёт и команды — [STATUS](../STATUS.md), не проценты готовности.
 
-Окружение Node22.16.0, JDK21.0.11, доступный TS5.8.3; project versions не менялись и не
-устанавливались. Файлы восстановлены через GitHub connector из-за DNS clone limitation.
-Нет full application build/architecture gate, настоящего Bundle codec, Android/Phaser запуска.
+Strict kernel typecheck и separate compatibility/turns/kernel extraction прошли. Общий
+extraction host — tools/module-extraction.mjs; wrappers сохраняют явные owner lists.
+Standalone turns не копирует grid, compatibility или чужие globals.
+Окружение Node22.16.0/JDK21.0.11/доступный TS5.8.3; project versions не устанавливались.
+Files восстановлены через connector из-за DNS clone limitation. Нет full app build,
+общего architecture gate, настоящего Bundle codec или Android/Phaser запуска.
 
-## Следующий участок
+## Continuations и остаток
 
-Защищённые continuation IDs/generations для renderer acknowledgment, cancellation и stale
-callbacks. Raw scheduler.next остаётся внутренним domain action, не выдаётся renderer.
-Далее — интеграция с настоящими Actor/Char/Level/AI и source collection owners. Source-map
-aggregation P00.2, общий toolchain P01 и human visual evidence по-прежнему открыты.
+TurnScheduler.activeRevision — только ephemeral identity нового act/clear/initialize,
+не новый tick/time/gameplay field. TurnContinuationGate проверяет token, revision и actor,
+делегирует next ровно один раз и не запускает process. Cancel/dispose не подменяют успех.
+Подробное evidence находится в continuations.md. Raw next renderer не получает.
+
+Открыта интеграция с настоящими Actor/Char/Level/AI, playback completion points и source
+collection owners. Source-map aggregation P00.2, общий toolchain P01 и human visual evidence
+по-прежнему не закрыты. Реальные правила игры не заменяются scripted test actors.

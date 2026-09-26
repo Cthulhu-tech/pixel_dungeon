@@ -14,6 +14,7 @@ export class TurnScheduler {
   private readonly occupants: (PDTurnParticipant | null)[];
   private current: PDTurnParticipant | null = null;
   private time = 0;
+  private revision: object = {};
 
   constructor(cellCount: number, members: PDTurnMembership, environment: PDTurnEnvironment) {
     if (!Number.isInteger(cellCount) || cellCount <= 0) throw new RangeError('Positive cell count required');
@@ -24,6 +25,8 @@ export class TurnScheduler {
 
   get now(): number { return this.time; }
   get currentActor(): PDTurnParticipant | null { return this.current; }
+  /** Ephemeral identity for the current act/scope; not gameplay time or save data. */
+  get activeRevision(): object { return this.revision; }
 
   has(actor: PDTurnParticipant): boolean { return this.members.has(actor); }
 
@@ -71,6 +74,7 @@ export class TurnScheduler {
 
   /** Source clear does NOT clear current or erase detached actors' clocks. */
   clear(): void {
+    this.revision = {};
     this.time = 0;
     this.occupants.fill(null);
     this.members.clear();
@@ -90,6 +94,7 @@ export class TurnScheduler {
   }
 
   initialize(mobs: Iterable<PDTurnParticipant>, blobs: Iterable<PDTurnParticipant>): void {
+    this.revision = {};
     const hero = this.environment.hero();
     if (hero === null) throw new TypeError('Original Actor.init requires a hero');
     this.addDelayed(hero, -FLOAT_MIN);
@@ -156,6 +161,7 @@ export class TurnScheduler {
           this.current = null;
           break;
         }
+        this.revision = {};
         proceed = current.act();
         if (proceed && !this.environment.heroIsAlive()) {
           proceed = false;

@@ -15,6 +15,7 @@
   },
   "files": [
     "src/types/turns/scheduler.d.ts",
-    "src/modules/turns/index.ts"
+    "src/modules/turns/index.ts",
+    "src/types/turns/continuations.d.ts"
   ]
 }

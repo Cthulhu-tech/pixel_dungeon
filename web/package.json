@@ -22,7 +22,8 @@
     "lint": "node tools/check-boundaries.mjs",
     "check:boundaries": "node tools/check-boundaries.mjs",
     "test:unit": "node --experimental-strip-types --test tests/unit/*.test.mjs",
-    "test:contracts": "node --test tests/contracts/*.test.mjs",
+    "test:contracts": "node --experimental-strip-types --test tests/contracts/*.test.mjs",
+    "test:contracts:turns": "node --experimental-strip-types --test tests/contracts/turn-continuations.test.mjs",
     "test:parity": "node tools/parity-gate.mjs",
     "test:parity:random": "node --experimental-strip-types --test tests/parity/random.test.mjs tests/parity/random-collections.test.mjs",
     "test:parity:pathfinding": "node --experimental-strip-types --test tests/parity/pathfinding.test.mjs",
@@ -30,6 +31,7 @@
     "test:parity:visibility": "node --experimental-strip-types --test tests/parity/visibility.test.mjs",
     "test:parity:turns": "node --experimental-strip-types --test tests/parity/turns.test.mjs",
     "test:parity:kernel": "node --experimental-strip-types --test tests/parity/random.test.mjs tests/parity/random-collections.test.mjs tests/parity/pathfinding.test.mjs tests/parity/ballistics.test.mjs tests/parity/visibility.test.mjs tests/parity/turns.test.mjs",
+    "test:kernel": "node --experimental-strip-types --test tests/parity/random.test.mjs tests/parity/random-collections.test.mjs tests/parity/pathfinding.test.mjs tests/parity/ballistics.test.mjs tests/parity/visibility.test.mjs tests/parity/turns.test.mjs tests/contracts/turn-continuations.test.mjs",
     "test:e2e": "node tools/browser-check-blocked.mjs",
     "test:tools": "node --test tools/*.test.mjs"
   },

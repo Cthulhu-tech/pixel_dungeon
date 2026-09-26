@@ -19,40 +19,42 @@ copyTrace не создают второй live owner. Сохраняются du
 wall rollback, short-circuit occupancy, failed-write increment и stale tail.
 
 GridShadowCaster владеет scratch obstacle intervals и derived rounding table. castShadow
-получает x/y, output Uint8Array, int distance 0–8 и blocker mask. Output — явно переданная
-изменяемая проекция, исходный отдельный blocker не мутируется. Сохраняются все восемь
-секторов, float32 endpoints, row-delayed occlusion, radius0 и invalid-radius behavior.
+получает x/y, output Uint8Array, int distance0–8 и blocker mask. Output — явно переданная
+изменяемая проекция, отдельный blocker не мутируется. Сохраняются восемь секторов, float32
+endpoints, row-delayed occlusion, radius0 и invalid-radius behavior.
 
 Constructors требуют положительные целые dimensions. Ballistica/ShadowCaster parity
-проверена на исходных 32×32, не на всех произвольных размерах. Domain buffs, AI, Actor
-occupancy ownership и Level.updateFieldOfView должны использовать эти алгоритмы отдельно.
+проверена на исходных32×32, не на всех произвольных размерах. Canonical actor position —
+actors; derived Actor.chars lookup теперь перенесён в turns. Grid получает его через
+query port, не создаёт второй occupancy index. Integration с buffs/AI/Level ещё открыта.
 
 ## Проверки и переносимость
 
-| Команда | Последний фактический результат |
+| Команда | Подсистемный результат |
 | --- | --- |
 | test:parity:pathfinding | 5/5 tests, 5460 independent Java cases |
 | test:parity:ballistics | 6/6 tests, 9150 cases |
 | test:parity:visibility | 6/6 tests, 8260 cases |
-| test:parity:kernel | 30/30 tests, 32112 cases с обоими Random suites |
+| test:parity:kernel / test:kernel | Актуальный общий состав и totals: docs/port/STATUS.md |
 
-Все исходные algorithm files hash-checked. Test-only Java Level/Actor supply inputs, не
-подменяют алгоритмы и не доказывают всю Android integration. Ожидаемые ответы вычисляет Java.
-Typecheck/extraction kernel прошли с grid + compatibility + только их declarations, без DOM
-и остальных globals. Node22.16.0/JDK21.0.11/доступный TS5.8.3; полный package.json-набор не установлен.
+Исходные algorithm files hash-checked. Test-only Java Level/Actor supply inputs, не
+подменяют алгоритмы и не доказывают whole Android integration. Expected вычисляет Java.
+Typecheck/extraction проходят без DOM/adapters/остальных globals. Grid зависит только от
+compatibility; общий kernel host дополнительно содержит turns и его declarations.
+Node22.16.0/JDK21.0.11/доступный TS5.8.3; полный package.json-набор не установлен.
 
-Для выноса: modules/grid, modules/compatibility, types/grid, types/compatibility, сохранение GPL.
-Runtime scratch освобождается с экземпляром; нет ресурсов для фиктивного lifecycle/dispose.
-Подробные mappings: docs/port/features/pathfinding.md, ballistics.md, visibility.md.
+Для выноса grid: modules/grid, modules/compatibility, types/grid, types/compatibility,
+сохранение GPL. Runtime scratch освобождается с экземпляром; нет ресурсов для фиктивного dispose.
+Mappings: docs/port/features/pathfinding.md, ballistics.md, visibility.md.
 
 ## English
 
-Pure instance-owned ports preserve the original pathfinding, ballistic and shadow-casting
+Pure instance-owned ports preserve original pathfinding, ballistic and shadow-casting
 algorithms, not substitutes from A*/navcat/FOV libraries. Caller masks and actor/world
 ownership remain separate. Shadow intervals use explicit float32 steps and original row
 semantics; radius zero and failure-before-clear behavior match the source.
 
-The combined kernel run with Random passes 30 tests / 32112 Java comparisons. Scoped
-extraction passes with only grid, its explicit compatibility dependency and their ambient
-contracts. This is not a full application build, original Level/Actor integration, or
-browser/visual verification. Those gates remain open.
+Grid extraction requires only this module, compatibility and their ambient contracts.
+The larger kernel host additionally verifies turns. Each subsystem's Java matrix passes;
+current global totals are recorded only in STATUS.md to avoid stale repeated progress.
+Production world/actor integration, full app build and browser evidence remain open.
