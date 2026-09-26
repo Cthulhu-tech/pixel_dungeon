@@ -5,18 +5,23 @@
   "type": "module",
   "license": "GPL-3.0-or-later",
   "packageManager": "npm@10.9.2",
-  "engines": { "node": ">=22.12.0" },
+  "engines": {
+    "node": ">=22.12.0"
+  },
   "scripts": {
     "dev": "vite",
     "build": "npm run typecheck && vite build",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
+    "typecheck:compatibility": "tsc -p tsconfig.compatibility.json",
+    "check:extraction:compatibility": "node tools/check-compatibility-extraction.mjs",
     "lint": "node tools/check-boundaries.mjs",
     "check:boundaries": "node tools/check-boundaries.mjs",
     "test:unit": "node --experimental-strip-types --test tests/unit/*.test.mjs",
     "test:contracts": "node --test tests/contracts/*.test.mjs",
     "test:parity": "node tools/parity-gate.mjs",
-    "test:e2e": "playwright test",
+    "test:parity:random": "node --experimental-strip-types --test tests/parity/random.test.mjs",
+    "test:e2e": "node tools/browser-check-blocked.mjs",
     "test:tools": "node --test tools/*.test.mjs"
   },
   "dependencies": {
