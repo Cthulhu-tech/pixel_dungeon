@@ -1,68 +1,75 @@
 # Фактический статус переноса
 
-Обновлено 2026-09-26. Продолжение: задача за задачей. PLAN P00–P10 — единственная очередь.
-Полной играбельной игры нет. Четыре алгоритмических участка реализованы и проверены отдельно.
+Обновлено 2026-09-26. Поручение: последовательно выполнять задачи без повторных подтверждений.
+PLAN P00–P10 — единственная очередь. Полной играбельной игры ещё нет.
 
-## Результат продолжения
+## Пять законченных алгоритмических участков продолжения
 
-| Участок P02 | Реализовано | Java evidence |
+| Участок | Результат | Проверка |
 | --- | --- | --- |
-| Оставшийся Random | Все16 wrapper operations, коллекционный порядок — explicit input | 13/13 tests, 9242 cases |
-| PathFinder | path/step/flee, maps, source ordering/bounds | 5/5 tests, 5460 cases |
-| Ballistica | collision/trace/distance, query order, magic/hitChars | 6/6 tests, 9150 cases |
-| ShadowCaster | eight-sector visibility, float32 intervals, радиусы0–8 | 6/6 tests, 8260 cases |
+| Random | Все16 wrapper operations; collection order задан явно | 13/13 tests, 9242 Java cases |
+| PathFinder | Exact path/step/retreat, distance maps/quirks | 5/5 tests, 5460 cases |
+| Ballistica | Trace/collision, magic/hitChars/query order | 6/6 tests, 9150 cases |
+| ShadowCaster | Eight-sector float32 visibility | 6/6 tests, 8260 cases |
+| Actor scheduler | Clocks/membership/current/hooks/ID/occupancy | 6/6 tests, 106 scenarios/4129 checkpoints |
 
-**Последний совместный прогон: 30/30 PASS, 32112 original-Java comparisons, 0 skipped.**
-Команда из web: `node --experimental-strip-types --test tests/parity/random.test.mjs tests/parity/random-collections.test.mjs tests/parity/pathfinding.test.mjs tests/parity/ballistics.test.mjs tests/parity/visibility.test.mjs`.
-`test:parity:kernel` обновлён на эти пять suites; это не полный parity всей игры.
-Scoped `tsc -p tsconfig.kernel.json` и `node tools/check-kernel-extraction.mjs` — PASS.
-Host содержит только grid, compatibility и собственные declarations; tmp очищен.
+**Последний общий прогон: 36/36 PASS, 0 skipped.** Сравнены 32112 algorithm cases и
+4129 последовательных scheduler checkpoints. Это разные единицы сценариев, не процент готовности.
+Команда из web: `node --experimental-strip-types --test tests/parity/random.test.mjs tests/parity/random-collections.test.mjs tests/parity/pathfinding.test.mjs tests/parity/ballistics.test.mjs tests/parity/visibility.test.mjs tests/parity/turns.test.mjs`.
 
-Коммиты: Random `3777e64296e2a87b52bf2812702d9909ddfb79a2`, PathFinder
-`b9f21257bdad022d411b1795455ea30753fab398`, Ballistica
-`03aae50995bc979ada87d90ab50af32357d6f703`; ShadowCaster — текущий атомарный набор.
-Symbol mapping/evidence: features/random.md, pathfinding.md, ballistics.md, visibility.md.
+Strict kernel typecheck и отдельные extraction compatibility/turns/kernel — PASS.
+Extraction host теперь общий tools/module-extraction.mjs; wrappers явно перечисляют
+owners. Standalone turns проверяется БЕЗ grid/compatibility/прочих globals/DOM.
 
-## Границы доказательства
+## Коммиты и evidence
 
-Original algorithm Java files byte-identical pinned blobs, проверяемые до javac. Для
-Ballistica/ShadowCaster test-only Level/Actor задают входные flags/occupancy, не являются
-production implementations. Expected получают оригинальные алгоритмы, не TS-порт.
-Shadow suite сравнивает все1024 клетки и blockers, repeat/alias и invalid-radius outcomes.
-Нет переписывания алгоритмов, fallback или изменения исходных quirks.
+Random `3777e64296e2a87b52bf2812702d9909ddfb79a2`; PathFinder `b9f21257bdad022d411b1795455ea30753fab398`;
+Ballistica `03aae50995bc979ada87d90ab50af32357d6f703`; ShadowCaster `0984d661d020024db472a78c919b65c39b21311a`.
+Actor scheduler — текущий атомарный code/test/docs набор. Symbol mappings в features/
+random.md, pathfinding.md, ballistics.md, visibility.md, turns.md.
 
-Окружение: Node22.16.0, JDK21.0.11, локально доступный TS5.8.3. Полный clone недоступен
-из-за GitHub DNS; относящиеся текстовые files восстановлены через connector. Project
-versions не менялись; npm install/ci полного набора с TS6.0.3 не выполнен.
+Каждый original Java algorithm hash-checked и неизменён. Для Actor test-only соседние
+классы дают scripted behavior, primitive fields и world inputs; не подменяют scheduler.
+**Порядок membership контролируется LinkedHashSet через reflection** и совпадает с TS input;
+это не эмуляция произвольного Android HashSet/identity hash. Bundle adapter не является save codec.
 
-**Не выполнялись:** full app typecheck/build/architecture gate, полная inventory проверка,
-Android/PD-classes application build, запуск/автоматизация браузера, ручная visual/input/audio
-приёмка. 30 passed tests не означают прохождение этих gates. test:e2e остаётся blocker/exit2,
-общий test:parity не превращён в ложный PASS. Число cases не является процентом готовности.
+Окружение Node22.16.0, JDK21.0.11, доступный TS5.8.3. GitHub DNS не позволяет полный clone;
+относящиеся files восстановлены через connector. Project versions не менялись, full npm
+install/ci с заявленным TS6.0.3 не выполнялся.
 
-## Открытые задачи
+Не выполнены: full app typecheck/build/architecture gate, полная inventory проверка,
+whole Android/PD-classes build, browser launch/automation и human visual/input/audio evidence.
+Общий test:parity не выдаёт ложный full PASS; test:e2e остаётся blocker/exit2.
 
-P00.1/P00.2: file-level inventory/source-map есть; semantic coverage и aggregation evidence открыты.
-P00.3–P00.5: subsystem oracles работают, whole Android/runtime compatibility не подтверждена.
-P00.6: HashMap/HashSet владельцы, полный random consumption schedule, saves/clocks/callbacks.
-P01/P01-RULES: полный toolchain/lockfile, старые type imports, shaders и прочие policy gates.
-P02: следующая задача — Actor scheduler/continuations; production RNG/save и integration
-Dungeon.findPath/flee/Level.updateFieldOfView с героями, buffs и AI ещё не реализованы.
-P03–P10: завершение не подтверждено; full gameplay/visual parity NOT_VERIFIED.
+## Архитектурное уточнение
 
-Source-map/generated summary ещё не агрегируют feature reports; не сбрасывать старые записи
-и не назначать whole-file VERIFIED по наличию отдельного класса. Grid public dims положительные;
-Ballistica/ShadowCaster доказательство относится к исходной карте32×32 и описанным входам.
+Source Actor.chars[] — производный индекс turns. Canonical actor position остаётся actors;
+grid использует query port, а не второй occupancy owner. ARCHITECTURE обновлён вместе с кодом.
+Time/ID weak records сохраняются у scheduler; clockOf/list — detached projections, не live stores.
+clear/current, late lazy-ID indexing, duplicate buff hooks, moving/next/death и частичное
+состояние при bounds failure воспроизведены. Никакого игрового rebalance/fallback.
 
-## История и сохранность
+## Следующие области PLAN
 
-Baseline `ce7f241515fd5c040fcf18b4beb5b7a49d9d535f`, Pixel Dungeon1.9.1/74;
-PD-classes `c0b690a4163020963e70a58a7d4f27965dc8f134` неизменны.
-`6f4ffdfd40fb31d00625ea24e4285ff2dbee0b60` — initial docs;
-`6cc1858e1534b3b826e2ae0cf25e1bf52b2dd1d2` — ранее существовавший inventory/web;
-`029fac6143cc09cc000b68c4349e1d0e990acc1f` — согласованный PLAN и PSX/CORE rules;
-`93aa9b7dba5e78fbe7e471ce49f137e839ffb8ce` — scalar Random/oracle/extraction/browser blocker.
+P02: следующий законченный участок — stale-safe continuation IDs/generations и cancellation
+для animation acknowledgments. Raw next пока только domain API. Реальные Char/AI/Level,
+коллекционный порядок Android, production RNG/save и полный draw schedule не интегрированы.
+P00.1/P00.2: file inventory/source-map есть, semantic completeness/aggregation evidence открыты.
+P00.3–P00.5: isolated oracles работают, whole original runtime compatibility не доказана.
+P00.6: прочие callbacks/saves/clocks/collection owners требуют аудита.
+P01/P01-RULES: full toolchain/lockfile, старые type imports, shader path и policy gates открыты.
+P03–P10: full gameplay/visual parity NOT_VERIFIED. Source-map не назначать whole-file VERIFIED
+по отдельному классу и не обнулять существующие записи.
+
+## Сохранность
+
+Baseline `ce7f241515fd5c040fcf18b4beb5b7a49d9d535f`, PD-classes
+`c0b690a4163020963e70a58a7d4f27965dc8f134` сохранены. Предыдущие checkpoints:
+`6f4ffdfd40fb31d00625ea24e4285ff2dbee0b60` initial docs;
+`6cc1858e1534b3b826e2ae0cf25e1bf52b2dd1d2` inventory/web scaffold;
+`029fac6143cc09cc000b68c4349e1d0e990acc1f` PLAN/PSX-CORE rules;
+`93aa9b7dba5e78fbe7e471ce49f137e839ffb8ce` первый scalar/oracle/extraction этап.
 
 Исходные src/assets/res/AndroidManifest/LICENSE не менялись. Runtime — web, references —
-tests/reference, oracle — tools/port, scratch — root tmp. Нет нового арта, игровых заглушек,
-сброса старой работы, dependency downgrade или запуска браузера.
+tests/reference, oracles — tools/port, scratch — root tmp (hosts удаляются). Нет нового арта,
+браузерных запусков, dependency downgrade, игровых заглушек или reset предыдущей работы.
