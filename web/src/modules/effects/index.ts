@@ -14,3 +14,4 @@ export { SnipersMark, Charm, Terror, GasesImmunity, Weakness } from './TargetedS
 export { Combo } from './Combo.ts';
 export { Frost } from './Frost.ts';
 export { Burning } from './Burning.ts';
+export { BlobField } from './BlobField.ts';

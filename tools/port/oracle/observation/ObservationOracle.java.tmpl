@@ -1,0 +1,49 @@
+/* Test host around hash-pinned Dungeon.observe. Original: Oleg Dolya, GPL-3.0-or-later. */
+package port.oracle;
+import java.io.*;
+import java.util.*;
+import com.watabou.pixeldungeon.utils.BArray;
+
+class Dungeon {
+  static Level level;
+  static Char hero = new Char();
+  static boolean[] visible;
+  // ORIGINAL_OBSERVE
+}
+class Char {}
+class Level {
+  static boolean[] fieldOfView;
+  boolean[] visited, mapped, input;
+  boolean failUpdate;
+  boolean[] updateFieldOfView(Char actor) {
+    ObservationOracle.trace.add("fov");
+    if (failUpdate) throw new IllegalStateException("update");
+    fieldOfView=input; return fieldOfView;
+  }
+}
+class GameScene {
+  static boolean fail;
+  static void afterObserve() {
+    ObservationOracle.trace.add("after:"+ObservationOracle.bits(Dungeon.visible)+":"+ObservationOracle.bits(Dungeon.level.visited));
+    if(fail)throw new IllegalStateException("after");
+  }
+}
+public class ObservationOracle {
+  static final ArrayList<String> trace=new ArrayList<>();
+  static boolean[] bits(String value){boolean[] b=new boolean[value.length()];for(int i=0;i<b.length;i++)b[i]=value.charAt(i)=='1';return b;}
+  static String bits(boolean[] b){StringBuilder s=new StringBuilder();for(boolean v:b)s.append(v?'1':'0');return s.toString();}
+  public static void main(String[] args) throws Exception {
+    BufferedReader reader=new BufferedReader(new InputStreamReader(System.in));
+    for(String line;(line=reader.readLine())!=null;){
+      String[] p=line.split("\\|",-1);Dungeon.visible=bits(p[0]);Level level=new Level();
+      level.visited=bits(p[1]);level.mapped=bits(p[2]);StringJoiner output=new StringJoiner("\t");
+      for(String op:p[3].split(";",-1)){
+        trace.clear();char mode=op.charAt(0);Dungeon.level=mode=='n'?null:level;
+        level.input=bits(op.substring(1));level.failUpdate=mode=='u';GameScene.fail=mode=='a';String result="ok";
+        try{Dungeon.observe();}catch(IndexOutOfBoundsException e){result="bounds";}catch(IllegalStateException e){result=e.getMessage();}
+        output.add(result+"|"+bits(Dungeon.visible)+"|"+bits(level.visited)+"|"+bits(level.mapped)+"|"+String.join(",",trace));
+      }
+      System.out.println(output);
+    }
+  }
+}

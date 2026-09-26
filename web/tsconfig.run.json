@@ -16,6 +16,7 @@
   },
   "files": [
     "src/types/run/result.d.ts",
-    "src/modules/run/index.ts"
+    "src/modules/run/index.ts",
+    "src/types/run/observation.d.ts"
   ]
 }

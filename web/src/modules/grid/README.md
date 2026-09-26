@@ -1,84 +1,56 @@
-# Grid / Клеточное ядро
+# Grid / Клеточное ядро и состояние уровня
 
-## Ответственность и публичная граница
+Public runtime API is `index.ts`; own types are `web/src/types/grid/*.d.ts`.
+No Phaser, DOM, XState, stores, timers or global mutable world. The existing pure dependency
+is compatibility.toJavaInt. Extraction includes grid, compatibility, their declarations and
+owner-local assets/terrain.json, never the whole application's type tree.
 
-Public runtime API — index.ts: Level constants, GridPathFinder, GridBallistica,
-GridShadowCaster, GridNavigation, GridDoors and pure grid geometry functions.
-Type-only contracts — types/grid/*.d.ts. No Phaser, DOM, XState/stores, timers or shared
-mutable world. Pure dependency: compatibility.toJavaInt for escape arithmetic.
-mask.ts is reused within grid; geometry.ts is the single Level adjacency implementation.
+## Owners
 
-GridPathFinder owns distance/goals/queue: exact path/step/flee, limits, source order and
-bounded failures. GridBallistica owns trace/distance; flags/occupancy come through a port.
-GridShadowCaster owns scratch intervals; output belongs to its caller.
+- GridPathFinder owns distance/goals/queue. GridBallistica owns trace/distance. GridShadowCaster
+  owns scratch intervals; LevelSight owns its per-level reusable field-of-view output.
+- GridNavigation owns only its scratch passability mask; actor/world queries are injected.
+- TerrainGrid owns the transferred runtime map and nine derived masks. The constructor's caller
+  relinquishes mutation; masks are read-only borrows and snapshots are detached runtime copies.
+- LevelExploration owns transferred visited/mapped buffers per level. Stable hero visibility
+  belongs to run/RunObservation, not to the reusable LevelSight output.
+- GridDoors owns no terrain: it calls the terrain/observation/presentation ports in source order.
 
-GridNavigation owns only a reusable working mask and delegates to PDNavigationPathfinder.
-Actor/world ports supply flight/buffs, avoid/occupancy/ordered positions. The backend borrows
-the mask synchronously and may not retain it as live world state. Adjacent paths keep the
-flattened difference rule and visibility-independent occupancy check. Find allows avoid with
-flight/Amok/Rage; flee only with flight, then restores the current cell. Hidden actors do not
-block the general mask. Original query order and short-circuit reads are preserved.
+Canonical character position belongs to actors; the derived Actor.chars index belongs to turns.
+Grid never creates a second occupancy owner or recomputes it outside the original phases.
 
-Canonical actor position belongs to actors; derived Actor.chars belongs to turns. Grid only
-queries that index. Dimensions must agree with the backend. Ballistica/visibility/navigation
-parity is checked for the original 32x32; generalized dimensions are not an unqualified claim.
+## Source behavior
 
-## Geometry and doors / Геометрия и двери
+Paths, trajectories and visibility retain original ordering, Java numbers and bounded failures.
+Flattened adjacency deliberately differs from geometric distance<=1. Find allows avoid cells
+with flight/Amok/Rage, flee only with flight. Only visible actors block the general path mask;
+adjacent checks query occupancy regardless of visibility. Backend masks are synchronous borrows.
 
-geometry.ts ports Level.adjacent/distance and NEIGHBOURS8 order. GridNavigation reuses adjacency
-instead of a second formula. Java int subtraction/abs overflow and truncation toward zero are
-preserved. Flattened adjacency is deliberately NOT geometric Chebyshev distance <= 1.
+TerrainGrid.paint is raw Painter.set. set writes terrain before looking up flags and does not
+clamp boundary cells. buildFlagMaps clamps boundaries, then stitches water and pit IDs. Its
+water test differs from set for unused IDs. cleanWalls and destroy/flood preserve neighbor order;
+no implicit FOV refresh, turn charge, sound or extra rebuild is introduced. Terrain tables are
+exported by the original Java class and consumed without normalization/schema/default pipelines.
 
-GridDoors ports Door.enter/leave through PDGridDoorPorts. It owns no terrain or observation
-state. Enter calls set-open → updateMap → observe → visibility → optional sound. Leave checks
-heap first and only then set-closed → updateMap → observe. Neither method adds its own turn,
-RNG, renderer, cache or loop. Full Level.set/masks and Dungeon.observe remain other operations.
+LevelSight composes the real caster with Blindness/Shadows, MindVision, Huntress and Awareness.
+Sensing intersects the entire FOV with discoverable before creature/heap reveal; query and
+partial-write order matter. Another actor query overwrites this borrowed output. RunObservation
+copies hero sight before recording exploration, so monster sight cannot corrupt hero visibility.
+LevelExploration.remember is the original short-circuit visited OR visible. mapCell only writes
+mapped[cell]; it is not a spell, implicit visit or observation trigger.
 
-## Проверки и переносимость
+Door.enter: set-open -> updateMap -> observe -> visibility -> optional sound. Door.leave checks
+heap first, then set-closed -> updateMap -> observe. Observation sees the old character position
+on leave and the new position on enter when called through the original base movement.
 
-Original full-file path/ballistics/visibility algorithms are hash-checked. Navigation and
-movement/door reference shells contain selected source methods and test-only neighbor ports,
-not a complete original Android runtime. The movement source-token gate checks all six
-selected methods against pinned Char/Level/Door files. Real scheduler contracts check occupancy.
+## Verification / Проверки
 
-Source provenance and commands: docs/port/features/{pathfinding,ballistics,visibility,
-navigation,movement-buffs}.md. Actual current counts/results: docs/port/STATUS.md.
+Evidence and source pins are in docs/port/features/{pathfinding,ballistics,visibility,navigation,
+movement-buffs,terrain-sight,observation-blobs}.md. Current totals/CI are in STATUS.md.
+Full-file algorithms are hash-checked; selected Level/Dungeon methods are extracted or token-
+checked against their pinned sources. Test-only neighbors are input adapters, not production
+Hero/Mob/Level replacements. Real-owner tests integrate terrain, doors, caster and scheduler.
 
-Вынос grid требует modules/grid, modules/compatibility, их declarations и лицензии.
-World/actor/pathfinder/door ports связывает вызывающий host. Kernel extraction дополнительно
-проверяет turns. Изолированный запуск не требует DOM/Phaser. Меньший movement host проверяет
-только geometry/doors/position, не заменяя полный kernel extraction.
-
-Это не готовые уровни, полноценные Hero/Mob, UI или browser parity. Неперенесённые части не
-подменяются тестовыми соседями в runtime; tests/reference остаётся только эталонным harness.
-
-## TerrainGrid / Состояние клеток уровня
-
-`TerrainGrid` owns the transferred runtime `Int32Array` map and nine derived masks. The caller
-relinquishes mutation of that array. `tileAt` and `mask` are read-only query boundaries;
-`snapshot` returns detached runtime data. This is not authored-content cloning or a save parser.
-`paint` is Painter.set's raw generation phase; `set` also updates masks, while `buildFlagMaps`
-performs the original boundary masking and water/pit stitching. `cleanWalls` updates discoverability.
-`destroy` retains flooding checks and neighbour order. No implicit FOV refresh, sound or turn charge.
-
-Сохранены различия source phases: build закрывает границы, set этого не делает; set сначала
-меняет map и лишь затем обращается к Terrain.flags. Флаг water в set использует ID, в build —
-LIQUID bit. Повторный build/clean не скрывается в каждом запросе. Двери подключаются через
-существующий GridDoors, который вызывает set и observe в исходном порядке.
-`terrain.json` — исходные constants/flags/discoveries, выгруженные Java TerrainData. Данные
-читаются напрямую, без schema/normalization/default pipeline. Default discover — identity,
-как ветка default исходного switch. Числовые terrain IDs — игровой контент, не asset URLs.
-
-## LevelSight / Полный базовый обзор персонажа
-
-One `LevelSight` per level owns the reusable FOV output; it is shared across that level's actor
-queries, not across runs. Actor HP/position/status and world mobs/heaps are narrow query ports.
-It composes the existing `GridShadowCaster` with original Blindness/Shadows, MindVision,
-Huntress distance-two sensing and Awareness. Borrowed output changes on the next query;
-`snapshot` does not. Query order, full-mask discoverability intersection and partial bounds
-failures are preserved. This is Level.updateFieldOfView, not Dungeon.observe or fog rendering.
-
-Read `docs/port/features/terrain-sight.md` for provenance, commands and evidence. Extraction
-requires grid declarations including terrain.d.ts/level-sight.d.ts, assets/terrain.json and
-its existing compatibility dependency. Full Level generation, visited/mapped saves, item
-placement, press/traps and production actor composition remain separate unfinished tasks.
+Parity claims apply to the original32x32 cases; generalized dimensions are not automatically
+verified. Full Level generation/press/traps, items, saved-game decoding, fog rendering and
+manual browser acceptance remain unfinished. A green build is not full game parity.

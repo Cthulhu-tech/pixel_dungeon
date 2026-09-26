@@ -51,7 +51,9 @@
     "typecheck:run": "tsc -p tsconfig.run.json",
     "test:application": "node --experimental-strip-types --test tests/application/*.test.mjs",
     "test:parity:terrain": "node --experimental-strip-types --test tests/parity/terrain.test.mjs",
-    "test:parity:level-sight": "node --experimental-strip-types --test tests/parity/level-sight.test.mjs"
+    "test:parity:level-sight": "node --experimental-strip-types --test tests/parity/level-sight.test.mjs",
+    "test:parity:observation": "node --experimental-strip-types --test tests/parity/observation.test.mjs",
+    "test:parity:blobs": "node --experimental-strip-types --test tests/parity/blobs.test.mjs"
   },
   "dependencies": {
     "phaser": "4.1.0",

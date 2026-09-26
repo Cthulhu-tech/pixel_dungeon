@@ -3,7 +3,19 @@
 Обновлено 2026-09-26. PLAN P00–P10 — единственная очередь; подтверждения между задачами
 не нужны. Полной играбельной игры нет, visual/input/audio parity NOT_VERIFIED.
 
-## Новый участок P02/P03/P04 — состояние уровня и обзор
+## Следующие завершённые участки кода: исследование карты и базовый газ
+
+RunObservation сохраняет отдельную текущую видимость героя; LevelExploration владеет visited/mapped.
+BlobField переносит spread/decay, seed/clear, собственные save fields и исходное resizing.
+Проверены 420 observation sequences /2520 checkpoints и320 Blob sequences /2894 checkpoints.
+Локально: новые11 tests PASS; полный kernel144/144, contracts53/53; build/boundaries,
+typecheck:run, effects/kernel extraction PASS. Наборы пересекаются; browser parity не проверялся.
+Evidence: [features/observation-blobs.md](features/observation-blobs.md).
+
+CI terrain/sight run36256765151 на3c7d979a2e9b22d801b91a92d69b4c7249a85879 завершился
+SUCCESS (прочитан API после завершения). Результат CI следующего commit не назначается заранее.
+
+## Сохранённый участок P02/P03/P04 — состояние уровня и обзор
 
 Checkpoint начала: `93ceeb7c68bfe875909c25644a2a2229b069a108`.
 Добавлены TerrainGrid, исходные terrain tables/discover, LevelSight, owner declarations,
@@ -53,6 +65,6 @@ Source ce7f241515fd5c040fcf18b4beb5b7a49d9d535f и PD-classes c0b690a4163020963e
 
 P01.1: canonical lock и чистый npm ci. P00.1/P00.2: semantic inventory/source-map aggregation;
 P00.3–P00.6: полный Android oracle и production collection/RNG order.
-P03/P05/P06: реальные Char/Hero/Mob/Item, Dungeon.observe/visited, полный Level lifecycle,
+P03/P05/P06: реальные Char/Hero/Mob/Item, renderer binding afterObserve, полный Level lifecycle,
 nested effects/blobs и первый полный командный сценарий. P04–P10: генераторы, полный
 контент/UI/save и ручное визуальное соответствие остаются открытыми.

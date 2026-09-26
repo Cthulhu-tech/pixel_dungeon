@@ -26,6 +26,7 @@
     "src/types/grid/navigation.d.ts",
     "src/types/grid/doors.d.ts",
     "src/types/grid/terrain.d.ts",
-    "src/types/grid/level-sight.d.ts"
+    "src/types/grid/level-sight.d.ts",
+    "src/types/grid/exploration.d.ts"
   ]
 }

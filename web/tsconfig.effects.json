@@ -20,6 +20,7 @@
     "src/modules/effects/index.ts",
     "src/types/effects/status.d.ts",
     "src/types/effects/resources.d.ts",
-    "src/types/compatibility/random.d.ts"
+    "src/types/compatibility/random.d.ts",
+    "src/types/effects/blobs.d.ts"
   ]
 }

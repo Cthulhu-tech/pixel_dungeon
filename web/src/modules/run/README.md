@@ -1,14 +1,25 @@
-# Run result descriptions / Описания исходов
+# Run / Исходы прохождения и наблюдение
 
-Public API: `resultDescription` from `index.ts`; declarations: `types/run/result.d.ts`.
-Own trusted data: `assets/result-descriptions.en.json`, extracted verbatim from original
-ResultDescriptions.java at ce7f241515fd5c040fcf18b4beb5b7a49d9d535f. It retains source
-placeholders and wording. This is the content boundary, not yet a complete run coordinator.
+Public runtime API is index.ts; own types are types/run/*.d.ts. This is not yet a full
+run coordinator. No domain imports of Phaser/DOM/storage/XState or mutable global Dungeon.
 
-Описание исхода имеет одного владельца; effects передают причину через порт, а не собирают
-копии сообщений в каждой реализации. Запрос не изменяет данные и не использует браузер.
-Форматирование и реальный fail/save/UI вызывающего приложения ещё должны быть интегрированы.
-Java resource-effects oracle uses the original ResultDescriptions and validates referenced
-messages in its event stream. It does not prove a completed ending screen or full run save.
+resultDescription reads assets/result-descriptions.en.json extracted verbatim from original
+ResultDescriptions.java at ce7f241515fd5c040fcf18b4beb5b7a49d9d535f. Placeholders and wording
+are preserved. Effects send a reason through a port rather than duplicating ending messages.
+Formatting and actual fail/save/end-screen integration remain separate tasks.
 
-Extraction requires only this module, owner declarations and JSON with resolveJsonModule.
+RunObservation ports Dungeon.observe through PDObservationLevel. It owns the transferred
+current hero-visible buffer; its caller relinquishes mutation. A level updates hero FOV and
+remembers visibility through its public API; afterObserve is called afterward. Null level
+returns unchanged. Full source range is checked before copy, while later memory/presentation
+errors do not roll back committed data. visible is a read-only borrow; snapshot is detached.
+
+LevelSight owns reusable per-actor FOV. LevelExploration owns visited/mapped for a level.
+The composition root binds these to RunObservation's narrow operations. Querying a monster's
+FOV must not mutate stable hero visibility. No new frame loop, event bus or subscription.
+
+Required files for extraction: this module, types/run declarations and its JSON. Enable
+resolveJsonModule. Evidence: docs/port/features/observation-blobs.md and resource-effects.md.
+The source observe method is extracted from hash-pinned Dungeon.java into a Java oracle with
+unchanged BArray; Level/Scene neighbors supply inputs, not production game implementations.
+Full level switching, fog rendering, persistence and manual browser acceptance remain open.

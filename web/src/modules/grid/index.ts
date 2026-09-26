@@ -11,3 +11,4 @@ export { LEVEL_WIDTH, LEVEL_HEIGHT, LEVEL_LENGTH, NEIGHBOURS4, NEIGHBOURS8, NEIG
 export { TERRAIN, terrainFlags, discoverTerrain } from './terrain.ts';
 export { TerrainGrid } from './TerrainGrid.ts';
 export { LevelSight } from './LevelSight.ts';
+export { LevelExploration } from './LevelExploration.ts';
