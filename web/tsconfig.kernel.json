@@ -1,0 +1,22 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": [
+      "ES2022"
+    ],
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "allowImportingTsExtensions": true,
+    "noEmit": true,
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "exactOptionalPropertyTypes": true,
+    "types": []
+  },
+  "files": [
+    "src/types/compatibility/random.d.ts",
+    "src/modules/compatibility/index.ts",
+    "src/types/grid/pathfinding.d.ts",
+    "src/modules/grid/index.ts"
+  ]
+}
