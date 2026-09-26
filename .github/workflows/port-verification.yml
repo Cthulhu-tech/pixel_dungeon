@@ -83,6 +83,10 @@ jobs:
           cat tsconfig.json
           node -p "require('typescript/package.json').version"
           node node_modules/typescript/bin/tsc --project tsconfig.json --showConfig
+      - name: Typecheck and extract character owners with the installed compiler
+        run: |
+          npm run typecheck:character
+          npm run check:extraction:character
       - name: Typecheck and build without opening a browser
         run: npm run build
       - name: Check current architecture gate
