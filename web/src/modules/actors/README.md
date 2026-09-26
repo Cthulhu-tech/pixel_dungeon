@@ -49,5 +49,22 @@ The existing character/combat extraction host checks their public API without DO
 Movement additionally has a smaller scoped host with explicit geometry/door ports.
 Actual global results remain in docs/port/STATUS.md; no duplicate progress totals here.
 
-Remaining: Char buff collection/appearance, concrete Hero/Mob content, full movement overrides,
+Remaining: production collection ordering, concrete effects/Hero/Mob content, full movement overrides,
 Bundle decoding and graphics. Passing selected-method tests never verifies all of Char.java.
+
+## CharacterBuffs / Коллекция эффектов
+
+CharacterBuffs owns a character's effect membership and source add/remove/query/playback
+ordering. It depends on narrow classification, scheduler, owner-state and presentation
+ports; neither Buff target nor turn time is duplicated. Main and filtered collection order
+are explicit dependencies. `find` uses the main order; `matching` constructs a separate set.
+The selector factory must return a fresh empty set with the applicable original ordering.
+Returned arrays are membership projections, not an alternative mutable collection.
+`detachAll` snapshots before callbacks; `removeMatching` does not call Buff.detach instead
+of the original Char.remove. Duplicate add and absent remove retain source side effects.
+
+Ключи исходных сообщений — `assets/buff-labels.en.json`; renderer разрешает их в текст.
+Наследование класса проверяет `PDCharacterBuffKinds`, не имя JS-конструктора. Отсутствие
+sprite подавляет только исходную ветку add; remove/update не получают новый fallback.
+Extraction needs actors files and only types/actors, plus the previously documented combat
+scope for the shared extraction command. New evidence: docs/port/features/character-buffs.md.

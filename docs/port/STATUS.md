@@ -1,98 +1,76 @@
 # Фактический статус переноса
 
-Обновлено 2026-09-26 после реализации движения/дверей/базовых Buff и чтения завершённого CI.
-Поручение: продолжать задачу за задачей без промежуточных подтверждений.
-PLAN P00–P10 — единственная очередь. Полной играбельной браузерной игры пока нет.
+Обновлено 2026-09-26. Работа по единому PLAN, без промежуточных подтверждений.
+Полной играбельной браузерной игры пока нет. Полный visual/input/audio parity NOT_VERIFIED.
 
-## Новый проверенный участок
+## Текущий участок: коллекция эффектов Char
 
-Исходный checkpoint: 72aa779af97b012badc17a396fceabaed9f6c97c.
-Code commit: cb79abd7cba228b96bff16ed5ff61a27a9337f64.
-Добавлены CharacterMovement (canonical position и Char.move/distance), GridDoors,
-общая geometry для Level.adjacent/distance/NEIGHBOURS8, Buff/FlavourBuff/BuffOperations,
-owner declarations/README, Java oracle, contracts, scoped configs/extraction.
-GridNavigation использует общую adjacency; прежняя navigation-проверка прошла повторно.
-Подробная source map этой части: [features/movement-buffs.md](features/movement-buffs.md).
+Исходный code checkpoint: `1330ba6353e9379c0b2f52d5dde910721867f5d9`; инфраструктура inputs
+добавлена в `0ec2fcc0c9b28820d14f16fac9516e1ce2656600`.
 
-**CI run36225450263 завершён, оба журнала прочитаны, head совпадает с code commit.**
-Kernel job108358475470 SUCCESS: npm run test:kernel **90/90 PASS**, test:contracts
-**30/30 PASS**, 0 skipped. Наборы частично пересекаются, не складывать их как уникальные tests.
+Добавлены CharacterBuffs, owner-scoped types, original English label data, независимый
+Java-harness девяти исходных методов, 5 parity/regression tests и 4 интеграционных теста.
+Подробности: [features/character-buffs.md](features/character-buffs.md).
 
-Новые проверки: movement-source hash/token gate шести исходных методов PASS;
-movement6/6 tests с1702 Java cases; buffs6/6 tests с504 sequences/4032 checkpoints;
-4/4 integrations с настоящим TurnScheduler. Contract-entry regression1/1 и audit fixtures5/5 PASS.
-Количество cases/checkpoints не означает процент готовности игры.
+Локально на ПОЛНОМ checkout и actual TS6.0.3:
+- 475 Java-сценариев /10235 checkpoints, включая queries, наследование, duplicate add,
+  absent remove, reentrant cleanup, sprite-null и частичные изменения перед ошибкой.
+- typecheck:character и extraction с negative declaration control PASS.
+- test:kernel **99/99 PASS**, 0 skipped; новые и предыдущие тесты.
+- check-boundaries regression **8/8 PASS**; общий check:boundaries PASS.
+Новый CI после публикации этого участка ещё не подтверждён: локальный успех не приписан CI.
 
-Dependency job108358475302 имеет общий FAILURE, но на **TypeScript6.0.3** успешно выполнены:
-- typecheck:character и check:extraction:character, включая negative declaration control;
-- typecheck:movement, typecheck:effects и typecheck:kernel;
-- check:extraction:movement, check:extraction:effects и check:extraction:kernel.
-Все эти scopes проверялись до позднего app failure. Это не обход ошибки общей сборки.
+Коллекцией владеет Char, target — Buff, часы — TurnScheduler. Реальные существующие владельцы
+соединены тестами: HP=0/очистка эффектов/freeCell, снятие Frost перед уроном и Slow/Speed.
+Конкретные Frost/Poison и полноценный Char/Hero/Mob пока не реализованы этой коллекцией.
+Порядок Java HashSet остаётся явным входом, не подменён универсальным JS Set.
 
-Position принадлежит CharacterMovement; базовый move не изменяет occupancy/время/next.
-Двери используют owner ports, heap удерживает дверь, observation имеет исходные фазы.
-Buff owns target, character owns collection, scheduler owns time. Append/affect/prolong
-сохраняют различия; исходные caught Exceptions диагностируются, fatal errors не скрываются.
-Это не полный Char/Hero/Mob, каталог buffs, Level.set, UI или saves.
+## Полный локальный snapshot и общий build
 
-## Ранее реализованные участки — повторно прошли в новом CI
+Получен через GitHub artifact10902809718/run36234060850: Git bundle и точные установленные
+пакеты. SHA256 ZIP/bundle/tar проверены. Теперь доступен полный исходный Git checkout и
+TypeScript6.0.3, а не только восстановленные тексты с TS5.8.3. Node22.16.0/JDK21.0.11.
+Provenance и исправление gate: [features/compilation-inputs.md](features/compilation-inputs.md).
 
-| Участок | Матрица |
+Обнаружен и исправлен ложный boundary failure: метод TurnScheduler.process ошибочно принимался
+за Node global process. Настоящие global reads по-прежнему запрещены; regression tests PASS.
+Общий npm run build остаётся FAIL/exit2: 31 diagnostic в vendor Phaser/rex/XState declarations.
+Vite runtime, browser launch и browser acceptance не выполнялись. Strict не отключён,
+skipLibCheck/fake typings не добавлены. Lockfile из snapshot пока не принят как canonical;
+успешного npm ci в репозитории не заявляется.
+
+## Сохранённое ядро и прежние подтверждения CI
+
+| Участок | Предыдущая подтверждённая матрица |
 | --- | --- |
-| Random | 13 tests /9242 original-Java cases |
+| Random | 13 tests /9242 Java cases |
 | PathFinder | 5 tests /5460 cases |
 | Ballistica | 6 tests /9150 cases |
 | ShadowCaster | 6 tests /8260 cases |
 | Actor scheduler | 6 tests /106 сценариев /4129 checkpoints |
 | Continuations | 13 contracts, включая1000 completions |
 | Navigation policy | 6 tests /5776 selected-method cases |
-| Char health/combat/time | 4 parity tests /7596 cases + source/contracts/integration |
+| Char health/combat/time | 4 parity tests /7596 cases + contracts/integration |
+| Movement/doors | 6 tests /1702 cases + source gate |
+| Buff/FlavourBuff | 6 tests /504 sequences /4032 checkpoints |
 
-Прежний code commit325cb12f0f996cead0489c3c8adeb90d9dfd6322, CI run36224213193:
-kernel job108354996248 SUCCESS73/73, contracts26/26; scoped character TS6/extraction SUCCESS;
-поздний app build FAILURE. История: [features/character.md](features/character.md).
-Новый успех не отменяет прежние failures и ограничения их доказательств.
+Прежний CI run36225450263, code cb79abd7cba228b96bff16ed5ff61a27a9337f64:
+kernel job108358475470 SUCCESS90/90; contracts30/30; scoped TS6/extraction SUCCESS;
+app job108358475302 FAILURE. Наборы частично пересекаются; cases не процент готовности.
+История и пределы доказательств сохранены в features/{ci,character,movement-buffs}.md.
+Текущий локальный kernel повторно проверил прежние участки без изменения исходных expected.
 
-## Реальный blocker P01.1 сохраняется
+## Открытая очередь
 
-Run36225450263 /job108358475302: все7 exact pins FOUND; npm install --ignore-scripts
---no-audit --no-fund установил46 packages, compilerTS6.0.3. Общий npm run build завершился
-exit2 в tsc: Phaser TS2526/TS2416, устаревшие rex types/imports/NameInputDialog declarations,
-XState StateSchema/exactOptionalPropertyTypes. Новые игровые scopes типизируются успешно.
-Vite build, общий boundary gate и поздние compatibility/turns extraction skipped.
+P00.1/P00.2: semantic completeness и aggregation features в source-map.
+P00.3–P00.6: полный Android oracle, production collection/RNG order, saves/clocks/callbacks.
+P01.1: устранить vendor declaration incompatibility, canonical lockfile и npm ci.
+P01-RULES: старые type imports/scaffold contracts, shader path и остальные policy gates.
+P03/P05/P06: конкретные эффекты/собственные checkpoints, флаги и composition реальных Char,
+затем Hero/Mob/Level и первый полный командный сценарий. Следующий участок — status effects.
+P04–P10: полный content/UI/save/visual parity ещё не подтверждён.
 
-Нет skipLibCheck, any, fake typings, downgrade или отключения strict.
-Canonical lockfile отсутствует; успешного воспроизводимого npm ci нет. История ранних CI
-и отозванных неподтверждённых сообщений: [features/ci.md](features/ci.md).
-
-## Локальная проверка и пределы доказанного
-
-Локально до публикации: movement.test6/6 (1702 Java cases), buffs.test6/6
-(504 sequences/4032 checkpoints), strict scoped tsc movement/effects PASS на TS5.8.3.
-Node22.16.0/npm10.9.2/JDK21.0.11; восстановленный subset, не полный clone (git DNS unavailable).
-Оригинальные Buff.java/FlavourBuff.java совпали по Git blob перед компиляцией.
-Полные source-token checks, scheduler integrations и installed compilerTS6 проверены именно
-CI из полного checkout. CI Java — Temurin javac21.0.12.1, Node22.16.0/npm10.9.2.
-
-Movement oracle использует выбранные исходные методы и test-only Level/Actor/Sprite ports.
-Buff oracle компилирует полные исходные Buff/FlavourBuff с тестовыми target/clock/UI соседями;
-UI icon не проверен. Это не production Hero/Mob/Char collection и не полный Android build.
-Source-map остаётся file-level: новые features не дают права поставить VERIFIED целому
-Char/Level/Buff или всем этапам P03/P05/P06. Aggregation остаётся открытой P00.2.
-
-## Следующие незавершённые участки
-
-- P00.1/P00.2: semantic completeness и aggregation features в существующий source-map.
-- P00.3–P00.6: полный original Android build, production collection order/RNG schedule,
-  saves/clocks и оставшиеся callbacks. Selected-method oracles не доказывают всё приложение.
-- P01.1: strict dependency compatibility/lockfile; P01-RULES: старые types/shaders/policy gates.
-- P02/P03/P05/P06: Char collection/add/remove/updateSpriteState и конкретные buffs;
-  затем реальные Hero/Mob и их movement overrides, Level.set/observe, production composition.
-- P03/P09: полноценный командный сценарий, save/checkpoint и continuation wiring.
-- P04–P10: полный content/UI/save/visual parity NOT_VERIFIED.
-
-Baseline ce7f241515fd5c040fcf18b4beb5b7a49d9d535f и PD-classes pin
-c0b690a4163020963e70a58a7d4f27965dc8f134 неизменны. Исходные src/assets/res/manifest/license
-не менялись. Runtime — web, tests/oracles — соответствующие каталоги, scratch — ignored tmp.
-Браузер не запускался/не автоматизировался. Ручная visual/input/audio evidence отсутствует;
-запрет test:e2e и незелёный общий parity gate сохранены. Новый код не выдаётся за полную игру.
+Baseline ce7f241515fd5c040fcf18b4beb5b7a49d9d535f и PD-classes
+c0b690a4163020963e70a58a7d4f27965dc8f134 неизменны. src/assets/res/manifest/license не менялись.
+Browser automation запрещена и не запускалась. Scratch — ignored root tmp; исходные expected
+не получаются TS-портом. Новая частичная реализация не выдаётся за законченный порт.

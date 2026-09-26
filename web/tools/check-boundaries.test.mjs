@@ -2,10 +2,12 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from 'node:fs';
 import { dirname, join } from 'node:path';
-import { tmpdir } from 'node:os';
+import { fileURLToPath } from 'node:url';
 import { checkBoundaries } from './check-boundaries.mjs';
 function check(t, files) {
-  const root = mkdtempSync(join(tmpdir(), 'pd-boundaries-'));
+  const scratch = fileURLToPath(new URL('../../tmp/', import.meta.url));
+  mkdirSync(scratch, { recursive: true });
+  const root = mkdtempSync(join(scratch, 'pd-boundaries-'));
   t.after(() => rmSync(root, { recursive: true, force: true }));
   for (const [path, value] of Object.entries(files)) { mkdirSync(dirname(join(root, path)), { recursive: true }); writeFileSync(join(root, path), value); }
   return checkBoundaries(root);
@@ -30,4 +32,14 @@ test('browser/time/random APIs and explicit any are rejected', (t) => {
 test('dynamic imports, re-exports and type imports obey boundaries', (t) => {
   const errors = check(t, { 'modules/a/index.ts': "export * from 'phaser'; const a=import('zustand'); type B=import('xstate').Actor; const x=import(name);" });
   assert.equal(errors.length, 4);
+});
+
+test('a scheduler process method and port properties are not Node or browser globals', (t) => {
+  assert.deepEqual(check(t, { 'modules/a/index.ts': 'export class Scheduler { process() {} resume() { this.process(); } } const port = { fetch() {}, process: 1 }; port.fetch();' }), []);
+});
+test('real global reads and shorthand references are still rejected', (t) => {
+  const errors = check(t, { 'modules/a/index.ts': 'const a=process.env; const b={process}; const c=Date.now(); const d=globalThis["window"];' });
+  assert.equal(errors.filter(e => e.endsWith(': process')).length, 2);
+  assert.ok(errors.some(e => e.endsWith(': Date')));
+  assert.ok(errors.some(e => e.endsWith(': globalThis')));
 });

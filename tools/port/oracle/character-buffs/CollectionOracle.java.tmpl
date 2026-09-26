@@ -1,0 +1,121 @@
+/* Test-only neighbors around unchanged selected Char.java methods.
+ * Original method copyright: Oleg Dolya, 2012-2015, GPL-3.0-or-later.
+ * LinkedHashSet fixes main iteration; the original filtered HashSet uses test-owned hashes.
+ */
+package port.oracle;
+import java.io.*;
+import java.util.*;
+public class CollectionOracle {
+  static final ArrayList<String> trace = new ArrayList<>();
+  static Char owner;
+  static Buff[] objects;
+  static int failAt, hooks;
+  static void event(String text) {
+    trace.add(text);
+    if (failAt > 0 && trace.size() == failAt) throw new IllegalStateException("injected");
+  }
+  static String ids(Collection<? extends Buff> values) {
+    ArrayList<String> result=new ArrayList<>();
+    for(Buff b:values) result.add(Integer.toString(b.key));
+    return String.join(",",result);
+  }
+  static class Actor {
+    static void add(Buff b) {
+      event("actor+:"+b.key+":"+ids(owner.buffs));
+      if((hooks & 1)!=0) owner.pos++;
+    }
+    static void remove(Buff b) {
+      event("actor-:"+b.key+":"+ids(owner.buffs));
+      if((hooks & 2)!=0) owner.invisible--;
+    }
+  }
+  static class Buff {
+    final int key;
+    Buff(int key) {this.key=key;}
+    @Override public int hashCode(){return key;}
+    void detach(){
+      event("detach:"+key);
+      if((hooks & 4)!=0 && key==0 && objects.length>1) owner.remove(objects[1]);
+      owner.remove(this);
+    }
+  }
+  static class Poison extends Buff {Poison(int k){super(k);}}
+  static class Amok extends Buff {Amok(int k){super(k);}}
+  static class Slow extends Buff {Slow(int k){super(k);}}
+  static class MindVision extends Buff {MindVision(int k){super(k);}}
+  static class Paralysis extends Buff {Paralysis(int k){super(k);}}
+  static class Terror extends Buff {Terror(int k){super(k);}}
+  static class Roots extends Buff {Roots(int k){super(k);}}
+  static class Cripple extends Buff {Cripple(int k){super(k);}}
+  static class Bleeding extends Buff {Bleeding(int k){super(k);}}
+  static class Vertigo extends Buff {Vertigo(int k){super(k);}}
+  static class Sleep extends Buff {Sleep(int k){super(k);}}
+  static class Burning extends Buff {Burning(int k){super(k);}}
+  static class Levitation extends Buff {Levitation(int k){super(k);}}
+  static class Frost extends Buff {Frost(int k){super(k);}}
+  static class Invisibility extends Buff {Invisibility(int k){super(k);}}
+  static class Shadows extends Invisibility {Shadows(int k){super(k);}}
+  static class Light extends Buff {Light(int k){super(k);}}
+  static class Charm extends Buff {int object;Charm(int k){super(k);object=k+10;}}
+  static class ChildPoison extends Poison {ChildPoison(int k){super(k);}}
+  static class ChildBurning extends Burning {ChildBurning(int k){super(k);}}
+  static Class<? extends Buff> kind(String name) throws Exception {
+    return Class.forName("port.oracle.CollectionOracle$"+name).asSubclass(Buff.class);
+  }
+  static Buff make(String name,int key) throws Exception {
+    return kind(name).getDeclaredConstructor(int.class).newInstance(key);
+  }
+  static class CharSprite {
+    static final String NEGATIVE="negative",POSITIVE="positive";
+    enum State {BURNING,LEVITATING,INVISIBLE,PARALYSED,FROZEN,ILLUMINATED}
+    void showStatus(String tone,String label){event("status:"+tone+":"+label);}
+    void add(State value){event("state+:"+value.toString().toLowerCase(Locale.ROOT));}
+    void remove(State value){event("state-:"+value.toString().toLowerCase(Locale.ROOT));}
+    void idle(){event("idle");}
+  }
+  static class PoisonParticle {static final Object SPLASH=new Object();}
+  static class CellEmitter {
+    static CellEmitter center(int pos){event("center:"+pos);return new CellEmitter();}
+    void burst(Object factory,int count){event("burst:"+count);}
+  }
+  static class Char {
+    int pos=33,invisible,identifier;
+    CharSprite sprite;
+    HashSet<Buff> buffs=new LinkedHashSet<>();
+    int id(){event("id:"+identifier);return identifier;}
+    // ORIGINAL_CHAR_METHODS
+  }
+  static String execute(String operation) throws Exception {
+    String[] a=operation.split(",",-1);
+    switch(a[0]) {
+      case "add":owner.add(objects[Integer.parseInt(a[1])]);return "void";
+      case "remove":owner.remove(objects[Integer.parseInt(a[1])]);return "void";
+      case "find":{Buff b=owner.buff(kind(a[1]));return b==null?"null":"id:"+b.key;}
+      case "filter":return "ids:"+ids(owner.buffs(kind(a[1])));
+      case "removeType":owner.remove(kind(a[1]));return "void";
+      case "all":return "ids:"+ids(owner.buffs());
+      case "update":owner.updateSpriteState();return "void";
+      case "detachAll":owner.onRemove();return "void";
+      case "charm":{Char other=new Char();other.identifier=Integer.parseInt(a[1]);return Boolean.toString(owner.isCharmedBy(other));}
+      case "sprite":owner.sprite=a[1].equals("1")?new CharSprite():null;return "void";
+      case "invisible":owner.invisible=Integer.parseInt(a[1]);return "void";
+      default:throw new IllegalArgumentException(operation);
+    }
+  }
+  public static void main(String[] args)throws Exception{
+    BufferedReader in=new BufferedReader(new InputStreamReader(System.in));String line;
+    while((line=in.readLine())!=null){
+      String[] f=line.split("\\|",-1);String[] kinds=f[0].split(",");
+      owner=new Char();owner.sprite=f[2].equals("1")?new CharSprite():null;owner.invisible=Integer.parseInt(f[3]);
+      hooks=Integer.parseInt(f[4]);failAt=Integer.parseInt(f[5]);objects=new Buff[kinds.length];
+      for(int i=0;i<kinds.length;i++)objects[i]=make(kinds[i],i);
+      ArrayList<String> checkpoints=new ArrayList<>();
+      for(String op:f[1].split(";")){
+        trace.clear();String result;
+        try{result=execute(op);}catch(NullPointerException e){result="error:null";}catch(IllegalStateException e){result="error:injected";}
+        checkpoints.add(result+"~"+ids(owner.buffs)+"~"+owner.pos+"~"+owner.invisible+"~"+String.join(",",trace));
+      }
+      System.out.println(String.join("\t",checkpoints));
+    }
+  }
+}

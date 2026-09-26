@@ -6,6 +6,22 @@ const slash = (s) => s.split(sep).join('/');
 function filesAt(root) {
   return readdirSync(root, { withFileTypes: true }).flatMap((e) => e.isDirectory() ? filesAt(resolve(root, e.name)) : /\.[cm]?tsx?$/.test(e.name) ? [resolve(root, e.name)] : []);
 }
+/** A property/declaration name is not a read of the homonymous global API. */
+function isPropertyOrDeclarationName(node) {
+  const parent = node.parent;
+  if (ts.isPropertyAccessExpression(parent)) return parent.name === node;
+  if (ts.isShorthandPropertyAssignment(parent)) return false;
+  if (ts.isBindingElement(parent)) return parent.name === node || parent.propertyName === node;
+  return parent.name === node && (
+    ts.isMethodDeclaration(parent) || ts.isMethodSignature(parent) ||
+    ts.isPropertyDeclaration(parent) || ts.isPropertySignature(parent) || ts.isPropertyAssignment(parent) ||
+    ts.isGetAccessorDeclaration(parent) || ts.isSetAccessorDeclaration(parent) ||
+    ts.isVariableDeclaration(parent) || ts.isParameter(parent) ||
+    ts.isFunctionDeclaration(parent) || ts.isFunctionExpression(parent) ||
+    ts.isClassDeclaration(parent) || ts.isClassExpression(parent) ||
+    ts.isInterfaceDeclaration(parent) || ts.isTypeAliasDeclaration(parent) || ts.isTypeParameterDeclaration(parent)
+  );
+}
 export function checkBoundaries(root = resolve('src')) {
   const files = filesAt(root); const known = new Set(files); const edges = new Map(); const errors = [];
   const forbidden = new Set(['window', 'document', 'globalThis', 'localStorage', 'sessionStorage', 'indexedDB', 'navigator', 'fetch', 'XMLHttpRequest', 'Audio', 'AudioContext', 'Date', 'setTimeout', 'setInterval', 'requestAnimationFrame', 'performance', 'process', 'require']);
@@ -39,7 +55,7 @@ export function checkBoundaries(root = resolve('src')) {
         else dependency(node, argument.text);
       }
       if (node.kind === ts.SyntaxKind.AnyKeyword) fail(node, 'Explicit any is forbidden');
-      if (module && ts.isIdentifier(node) && forbidden.has(node.text)) fail(node, `Browser/time/global API must be injected through a port: ${node.text}`);
+      if (module && ts.isIdentifier(node) && forbidden.has(node.text) && !isPropertyOrDeclarationName(node)) fail(node, `Browser/time/global API must be injected through a port: ${node.text}`);
       if (module && ts.isPropertyAccessExpression(node) && node.expression.getText(source) === 'Math' && node.name.text === 'random') fail(node, 'Inject RandomSource; do not use Math.random');
       if (module && ts.isElementAccessExpression(node) && node.expression.getText(source) === 'Math' && node.argumentExpression?.getText(source).replace(/["']/g, '') === 'random') fail(node, 'Inject RandomSource; do not use Math[random]');
       ts.forEachChild(node, visit);
