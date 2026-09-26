@@ -20,6 +20,9 @@ export class CharacterHealth {
   snapshot(): PDCharacterHealthSnapshot { return { HP: this.hp, HT: this.ht }; }
   isAlive(): boolean { return this.hp > 0; }
 
+  /** Source direct HP += amount, distinct from damage/healing effects; no clamp or buff callbacks. */
+  addCurrent(amount: number): void { this.hp = (this.hp + amount) | 0; }
+
   damage(amount: number, source: PDCharacterDamageSource): void {
     if (this.hp <= 0) return;
     this.ports.detachFrost();

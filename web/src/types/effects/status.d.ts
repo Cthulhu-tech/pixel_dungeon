@@ -32,7 +32,9 @@ interface PDShadowsPort extends PDObservePort, PDInvisibilityPort {
 interface PDShadowsState { readonly left: number; }
 type PDStatusId = 'Cripple' | 'Slow' | 'Speed' | 'Vertigo' | 'Amok' | 'Rage' | 'Sleep'
   | 'MindVision' | 'Awareness' | 'Blindness' | 'Light' | 'Paralysis' | 'Roots'
-  | 'Levitation' | 'Invisibility' | 'Shadows';
+  | 'Levitation' | 'Invisibility' | 'Shadows' | 'Poison' | 'Bleeding' | 'Barkskin' | 'Fury'
+  | 'Ooze' | 'Regeneration' | 'GasesImmunity' | 'SnipersMark' | 'Charm' | 'Terror' | 'Weakness'
+  | 'Combo' | 'Hunger' | 'Frost' | 'Burning';
 interface PDStatusInfo {
   readonly icon: number;
   readonly title: string | null;

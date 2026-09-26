@@ -30,12 +30,12 @@ application error. Factories/error classification must be wired explicitly in pr
 504 последовательности / 4032 checkpoints плюс целевые contracts. Отдельные integration
 tests используют настоящий TurnScheduler. Exact-class immunity проверяется на его границе.
 
-Это не полный каталог эффектов, не Char.buffs/add/remove/updateSpriteState и не BuffIndicator.
-Иконки/тексты принадлежат presentation; конкретные Poison/Paralysis/etc и save codecs ещё
-требуют переноса. Не объявлять весь effects/P06 готовым. Evidence и commands:
+Базовые операции сами по себе не доказывают полный effects/P06 или BuffIndicator.
+Коллекция Char перенесена отдельно в actors; конкретные классы описаны ниже.
+Production composition, полные save codecs и отображение ещё открыты. Evidence и commands:
 docs/port/features/movement-buffs.md; актуальный результат CI — docs/port/STATUS.md.
 
-Extraction: modules/effects plus only types/effects and their public injected ports.
+Extraction: modules/effects + modules/compatibility and only their owner declarations/data.
 Run npm run typecheck:effects and npm run check:extraction:effects; tests never open a browser.
 
 ## Concrete status effects / Конкретные состояния
@@ -50,5 +50,22 @@ MindVision.distance is not silently persisted. CharacterStatus owns the actual t
 
 Verification and exact scope: docs/port/features/status-effects.md. Extraction copies only
 effects and owner declarations/data; TypeScript resolveJsonModule is enabled for these trusted
-imports. Remaining damage/resource effects and full item/actor/world integration are separate
-PLAN tasks, not generic effects silently substituted by these classes.
+imports. Damage/resource effects are described below. Full item/actor/world integration remains
+separate PLAN work, not generic behavior silently substituted by these classes.
+
+## Resource, damage and item-interaction effects
+
+Poison, Bleeding, Barkskin, Fury, Ooze, Regeneration, Hunger, SnipersMark, Charm, Terror,
+GasesImmunity, Weakness, Combo, Frost and Burning cover the other 15 top-level concrete
+classes in the original actors/buffs directory. Nested ring/item effects and blobs remain
+separate work. This source-file accounting is not a claim that all effect integrations work.
+
+Own source Bundle fields (left/level/object) are exposed as owner checkpoints; base time/id
+remain in turns. Do not invent persisted Barkskin/Combo state absent from their source.
+Each effect uses typed ports for actual actor, item, level and ending operations. Test ports
+are not substituted for missing production Hero/inventory/trap behavior. Death descriptors
+belong to run/assets; effect status/messages belong to effects/assets.
+
+See docs/port/features/resource-effects.md for full-class Java oracles, real-owner integration
+and uncovered runtime boundaries. Pure extraction includes compatibility's numeric function
+and its required owner declarations; it never imports renderer or the global application.

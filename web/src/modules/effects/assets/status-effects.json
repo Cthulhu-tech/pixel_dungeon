@@ -74,5 +74,81 @@
   "Shadows": {
     "icon": 13,
     "title": "Shadowmelded"
+  },
+  "Poison": {
+    "icon": 3,
+    "title": "Poisoned"
+  },
+  "Bleeding": {
+    "icon": 26,
+    "title": "Bleeding",
+    "pi": 3.1415926
+  },
+  "Barkskin": {
+    "icon": 24,
+    "title": "Barkskin"
+  },
+  "Fury": {
+    "icon": 18,
+    "title": "Fury",
+    "healthFraction": 0.4
+  },
+  "Ooze": {
+    "icon": 8,
+    "title": "Caustic ooze"
+  },
+  "Regeneration": {
+    "icon": -1,
+    "title": null,
+    "delay": 10
+  },
+  "GasesImmunity": {
+    "icon": 25,
+    "title": "Immune to gases",
+    "duration": 5,
+    "immunities": [
+      "Paralysis",
+      "ToxicGas",
+      "Vertigo"
+    ]
+  },
+  "SnipersMark": {
+    "icon": 27,
+    "title": "Zeroed in"
+  },
+  "Charm": {
+    "icon": 21,
+    "title": "Charmed"
+  },
+  "Terror": {
+    "icon": 10,
+    "title": "Terror",
+    "duration": 10
+  },
+  "Weakness": {
+    "icon": 14,
+    "title": "Weakened",
+    "duration": 40
+  },
+  "Combo": {
+    "icon": 17,
+    "title": "Combo"
+  },
+  "Hunger": {
+    "icon": 5,
+    "title": "Hungry",
+    "hungry": 260,
+    "starving": 360,
+    "step": 10
+  },
+  "Frost": {
+    "icon": 15,
+    "title": "Frozen",
+    "duration": 5
+  },
+  "Burning": {
+    "icon": 2,
+    "title": "Burning",
+    "duration": 8
   }
 }

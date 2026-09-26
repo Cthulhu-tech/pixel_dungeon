@@ -1,0 +1,16 @@
+{
+  "MOB": "Killed by %s on level %d",
+  "BOSS": "Killed by the %s on level %d",
+  "WAND": "Killed by your own %s on level %d",
+  "GLYPH": "Killed by the %s on level %d",
+  "BOMB": "Killed by an explosion of a bomb on level %d",
+  "TRAP": "Killed by discharge of %s on level %d",
+  "BURNING": "Burned to death on level %d",
+  "HUNGER": "Starved to death on level %d",
+  "POISON": "Died from poison on level %d",
+  "GAS": "Died from toxic gas on level %d",
+  "BLEEDING": "Bled to death on level %d",
+  "OOZE": "Killed by a caustic ooze on level %d",
+  "FALL": "Fell to death on level %d",
+  "WIN": "Obtained the Amulet of Yendor"
+}

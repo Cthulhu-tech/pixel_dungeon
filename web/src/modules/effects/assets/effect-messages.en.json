@@ -1,0 +1,13 @@
+{
+  "Poison": "You died from poison...",
+  "Bleeding": "You bled to death...",
+  "Hunger": "You starved to death...",
+  "Ooze": "%s killed you...",
+  "Burning": "You burned to death...",
+  "hungry": "You are hungry.",
+  "starving": "You are starving!",
+  "combo": "%d hit combo!",
+  "burns": "%s burns up!",
+  "Hungry": "Hungry",
+  "Starving": "Starving"
+}

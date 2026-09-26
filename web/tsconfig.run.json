@@ -9,17 +9,13 @@
     "strict": true,
     "noUncheckedIndexedAccess": true,
     "exactOptionalPropertyTypes": true,
-    "noImplicitOverride": true,
     "allowImportingTsExtensions": true,
+    "resolveJsonModule": true,
     "noEmit": true,
-    "types": [],
-    "resolveJsonModule": true
+    "types": []
   },
   "files": [
-    "src/types/effects/buffs.d.ts",
-    "src/modules/effects/index.ts",
-    "src/types/effects/status.d.ts",
-    "src/types/effects/resources.d.ts",
-    "src/types/compatibility/random.d.ts"
+    "src/types/run/result.d.ts",
+    "src/modules/run/index.ts"
   ]
 }

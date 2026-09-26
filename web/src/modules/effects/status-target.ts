@@ -9,3 +9,8 @@ export function resistanceDuration(target: PDBuffTarget, duration: number,
   return resistance === null ? Math.fround(duration) :
     Math.fround(Math.fround(resistance.durationFactor()) * Math.fround(duration));
 }
+
+export function resistanceFactor(target: PDBuffTarget, port: PDStatusResistancePort): number {
+  const resistance = port.resistance(target);
+  return resistance === null ? 1 : Math.fround(resistance.durationFactor());
+}

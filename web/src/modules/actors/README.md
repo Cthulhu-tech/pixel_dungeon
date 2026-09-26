@@ -49,7 +49,7 @@ The existing character/combat extraction host checks their public API without DO
 Movement additionally has a smaller scoped host with explicit geometry/door ports.
 Actual global results remain in docs/port/STATUS.md; no duplicate progress totals here.
 
-Remaining: production collection ordering, concrete effects/Hero/Mob content, full movement overrides,
+Remaining: production collection ordering, effect/Hero/Mob integration, full movement overrides,
 Bundle decoding and graphics. Passing selected-method tests never verifies all of Char.java.
 
 ## CharacterBuffs / Коллекция эффектов
@@ -75,3 +75,9 @@ CharacterStatus owns paralysed/rooted/flying/invisible/viewDistance, with the so
 and signed integer counters. These are mutable source fields, not a second cached projection
 of the buff collection. Snapshots are read models, not additional persisted Char fields.
 Concrete effects receive narrow write/read ports to this owner; they own no duplicate flags.
+
+## Direct vitality increments / Прямое изменение здоровья
+
+`CharacterHealth.addCurrent` performs source signed-int HP addition without invoking damage
+callbacks, clamping or removing Frost. Regeneration uses this owner operation after its own
+source eligibility checks. It does not introduce a second HP value in effects or stores.
