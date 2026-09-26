@@ -1,0 +1,55 @@
+name: Port source audit
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'tools/port/inventory*'
+      - 'docs/port/source-baseline.json'
+      - '.github/workflows/port-audit.yml'
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency:
+  group: port-source-audit
+  cancel-in-progress: false
+jobs:
+  audit:
+    if: github.repository == 'Cthulhu-tech/pixel_dungeon' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - name: Test audit tool
+        run: |
+          node --version
+          node --test tools/port/inventory.test.mjs
+      - name: Fetch pinned dependency without executing its code
+        env:
+          DEPENDENCY_DIR: ${{ runner.temp }}/pd-classes-audit
+        run: |
+          set -euo pipefail
+          SHA=$(node -e "const b=require('./docs/port/source-baseline.json'); console.log(b.externalDependencies.find(d=>d.repository==='watabou/PD-classes').candidateCommit)")
+          [[ "$SHA" =~ ^[0-9a-f]{40}$ ]]
+          git init "$DEPENDENCY_DIR"
+          git -C "$DEPENDENCY_DIR" remote add origin https://github.com/watabou/PD-classes.git
+          git -C "$DEPENDENCY_DIR" fetch --depth=1 origin "$SHA"
+      - name: Generate and verify complete file-level inventory
+        run: |
+          node tools/port/inventory.mjs --pd-classes "$RUNNER_TEMP/pd-classes-audit"
+          node tools/port/inventory.mjs --pd-classes "$RUNNER_TEMP/pd-classes-audit" --check
+          echo '### Pinned source inventory (not gameplay parity)' >> "$GITHUB_STEP_SUMMARY"
+          echo '```json' >> "$GITHUB_STEP_SUMMARY"
+          cat docs/port/generated/summary.json >> "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+      - name: Commit only generated inventory and mapping, never original files
+        run: |
+          set -euo pipefail
+          git add -- docs/port/generated/inventory.json docs/port/generated/summary.json docs/port/source-map.json
+          if git diff --cached --quiet; then exit 0; fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git commit -m 'chore(port): update pinned source inventory and mapping [skip ci]'
+          git pull --rebase origin main
+          git push origin HEAD:main
