@@ -1,72 +1,93 @@
 # Фактический статус переноса
 
-Обновлено: 2026-09-26.
+Обновлено 2026-09-26. Текущее поручение: **записать согласованный план и взять обязательные правила из PSX/CORE**. В этой сессии изменяется документация, не реализация игры.
 
-## Итог текущей сессии
+## 1. Что записано
 
-**Создан контекст и план реализации. Игра на JS/TS ещё не реализована.** Не считать наличие архитектурных документов выполнением переноса 1:1.
+- `PLAN.md`: результат каждого этапа P00–P10, четыре реестра, зависимости, первый законченный сценарий, параллельное развитие content/UI/saves, конкретные условия приёмки и формат задачи.
+- `MANDATORY_RULES.md`: применимые обязательные правила PSX/CORE, source commits, ограничения типов/JSON/shaders/browser, ownership/lifecycle/quality и таблица явных адаптаций.
+- `AGENTS.md`: обязательный вход и маршрутизация нового контекста.
+- `ARCHITECTURE.md`, `STACK.md`, `PARITY.md`, `README.md`: согласованы с новыми правилами; нет прежнего требования агенту запускать Playwright ради готовности.
+- Этот STATUS: исправлено устаревшее утверждение, что inventory/source-map/web ещё отсутствуют; сохранена граница между наличием кода и его проверкой.
 
-В `main` добавлены:
+Источники правил: `Cthulhu-tech/psx@9adcf519b8e47c3bdbc5e5c52b78f418715e597f` и `Cthulhu-tech/core-@8b8d7aed0808d2f809de542e77c47f7e53b91915`. Прочитаны обязательные entrypoints/правила, PRE_TASK и относящиеся контекстные разделы. Физические configs/assets и private project content этих игр не переносились. Источники правил не являются зависимостями приложения.
 
-- `AGENTS.md` — обязательные правила переноса и работы исполнителя.
-- `docs/port/README.md` — источник, результаты начального аудита и навигация.
-- `docs/port/ARCHITECTURE.md` — DDD-модули, владельцы состояния, ports/adapters и переносимость.
-- `docs/port/PARITY.md` — независимый oracle, Java/JS/RNG/порядок ходов, контент, визуальная и платформенная приёмка.
-- `docs/port/STACK.md` — обязательный стек, smoke-test и navcat DEFERRED.
-- `docs/port/PLAN.md` — рабочие задачи P00–P10 с зависимостями и критериями готовности.
-- `docs/port/source-baseline.json` — закреплённый оригинал и candidate PD-classes.
-- `docs/port/STATUS.md` — этот отчёт.
+## 2. Реальное состояние main до документальных изменений
 
-Исходные Java-код, ресурсы, ассеты, AndroidManifest и LICENSE не изменялись. Новый `web/` в этой сессии не создавался. GitHub Issues в рамках этой сессии не создавались: задачи записаны непосредственно в PLAN.md.
+Проверенный checkpoint: `6cc1858e1534b3b826e2ae0cf25e1bf52b2dd1d2`.
 
-## Что проверено фактически
+Сравнение с прежним docs-only commit `6f4ffdfd40fb31d00625ea24e4285ff2dbee0b60` показало 23 последующих commit и добавленные результаты:
 
-Через GitHub выполнено чтение repository metadata, корневого дерева и commit; прочитаны README, manifest, Actor.java, части Dungeon.java/Level.java и Random.java внешней библиотеки. Установлена версия игры 1.9.1/74 и зафиксирован исходный commit `ce7f241515fd5c040fcf18b4beb5b7a49d9d535f`.
+| Область | Что присутствует | Что этим НЕ доказано |
+| --- | --- | --- |
+| Аудит | tools/port/inventory.mjs и inventory.test.mjs | Полнота поведенческой инвентаризации/результаты теста |
+| Реестры | generated/inventory.json, summary.json, source-map.json | Покрытие всех branch/content/UI states или игровое соответствие |
+| Workflow | .github/workflows/port-audit.yml | Успешное выполнение всех jobs; workflow не запускался нами в этой сессии |
+| Web scaffold | package.json, npm settings, Vite/TS files, entry, smoke scene, flow/store, grid module | Рабочая игра, совместимость объявленных версий или готовый P01 |
+| Tests/tools | unit/contract files, check-boundaries, parity gate, Playwright config/test | Прохождение tests, достаточность новых policy gates или visual parity |
 
-Проверены официальные материалы Phaser, rex, XState, Zustand, Vite и navcat. Это проверка назначения библиотек и опубликованной документации, не совместная установка/запуск выбранных пакетов.
+Прочитаны package.json и audit workflow. В package.json объявлены exact версии/конфигурация npm; установка/registry compatibility не проверялись. Существующий `test:e2e` вызывает Playwright: **не запускать** по новому PD-R20. Старый test/config в этой документационной сессии не удалялся.
 
-Попытка локального `git clone` в рабочем окружении не удалась из-за DNS (`Could not resolve host: github.com`); исходники исследовались через подключённый GitHub, документы записаны через него же. Это ограничение текущего окружения, не дефект репозитория.
+Наличие заготовки не следует обнулять: исходная работа сохраняется. Переход от прежнего NOT_STARTED к наличию scaffold не означает VERIFIED.
 
-**Не выполнялись:** установка npm/yarn-пакетов, typecheck, lint, browser build, unit/parity/e2e, запуск Android/Java-оригинала и browser smoke-test. Результатов таких тестов пока нет. Числа покрытия/готовности не рассчитаны; полный source map ещё отсутствует.
+## 3. Выполненные и невыполненные проверки этой сессии
 
-## Реальные риски, которые нельзя пропустить
+**Выполнено:** чтение актуальных GitHub refs/files, сравнение старого docs checkpoint с существующей заготовкой, чтение источников обязательных правил и текущих target docs, запись согласованных документов через GitHub. Проверки этой задачи относятся к документации и её связи с фактическим деревом.
 
-| ID | Область | Состояние | Следующее действие |
-| --- | --- | --- | --- |
-| B01 | PD-classes | Найден candidate commit, совместимость не проверена | Проверить все imports и собрать original/harness с закреплённой библиотекой |
-| B02 | RNG | Wrapper использует Java Math.random; общий seed-контракт не установлен | Сделать независимый draw tape/harness и проверить casts/порядок потребления |
-| B03 | Scheduler | HashSet, float time, sprite.isMoving и next | Зафиксировать tie/order/continuation fixtures, не заменить их JS Set/кадровым таймером |
-| B04 | Полнота | Прочитаны ключевые файлы, не все исходники | Сформировать полный source/content/assets/UI реестр |
-| B05 | Toolchain | Стек выбран, точные совместимые версии не установлены | P01: registry/engines/lockfile + реальный browser smoke-test |
-| B06 | Визуальный эталон | Нет воспроизводимых baseline screenshots/timing traces | Запустить оригинал и записать viewport, frames, метрики, timing |
-| B07 | Saves/platform | Импорт Java-save и browser mappings не исследованы | Аудит Bundle/aliases/полей и отдельная матрица платформенных соответствий |
+**Не выполнялись:** npm install, запуск inventory/tests, typecheck, lint, build, parity/extraction tests, Android/Java oracle, browser launch/attach/automation, ручной visual/audio тест. Результаты прежних запусков не исследованы и не приписываются этой сессии. Проценты готовности не рассчитаны.
 
-Эти пункты не являются разрешением упрощать игру. Блокировать только затронутую область; P01 и инвентаризацию можно продолжать независимо от проблем запуска Android oracle.
+Исходные `src/`, `assets/`, `res/`, AndroidManifest/LICENSE, существующие tools/runtime/tests/config/workflows и generated JSON этой задачей не изменялись. Никаких утверждений, что новые правила уже enforced существующими tests, нет.
 
-## Статусы этапов
+## 4. Открытые области
 
-| Этап | Статус |
+| ID | Область | Факт / следующий шаг |
+| --- | --- | --- |
+| B01 | PD-classes | Candidate закреплён; build/runtime compatibility требует независимого evidence P00.3/P00.4 |
+| B02 | RNG/Java semantics | Wrapper, casts и draw order требуют fixtures; одинаковый seed не предполагается |
+| B03 | Turns | HashSet ties, float time и animation continuations требуют differential tests |
+| B04 | Полнота | File-level inventory/source-map существуют; сверить поведение/контент/все UI states на P00.1/P00.2 |
+| B05 | Toolchain | Versions объявлены; install/build/совместимость и lockfile evidence надо проверить на P01 |
+| B06 | Visual/runtime evidence | Полноценная browser проверка остаётся ручной; отсутствующее evidence — NOT_VERIFIED |
+| B07 | Saves/platform | Bundle/import/aliases/полная platform mapping ещё требуют обследования и tests |
+| B08 | Новые rules vs scaffold | P01-RULES: browser scripts, global declarations, shader/JSON/owner boundaries и policy tests привести к новой редакции |
+| B09 | Legacy audit metadata | Readiness-поля старого source-baseline.json — снимок первоначального аудита, не текущий прогресс; сверить с writer/readers на P00 без смены source identity |
+
+Не заменять блокеры заглушками, не ослаблять checks и не запускать запрещённый browser. Блокируется только зависимая часть; независимая разрешённая работа продолжается.
+
+## 5. Статусы этапов
+
+| Область | Статус |
 | --- | --- |
-| Контекст/правила/план | WRITTEN |
-| P00 — исходный аудит | IN_PROGRESS: только начальное обследование |
-| P01–P10 — реализация и приёмка | TODO |
-| Полный browser port | NOT_STARTED |
-| Подтверждённый паритет | NOT_VERIFIED |
+| Согласованный план и обязательный контекст | WRITTEN; это не implementation |
+| P00 | IN_PROGRESS: inventory/source-map уже есть; полнота/evidence требуют проверки |
+| P01 | IN_PROGRESS: scaffold есть; integration/rule compliance не подтверждены |
+| P01-RULES | TODO: документация не заменяет исправления code/config и gates |
+| P02–P10 | Завершение не подтверждено; не назначать VERIFIED по наличию начального grid module |
+| Полный порт | NOT_COMPLETE |
+| Полный игровой/визуальный паритет | NOT_VERIFIED |
 
-## Следующий конкретный шаг
+## 6. Следующий конкретный шаг
 
-Начать P00.1/P00.2: получить закреплённый baseline, создать воспроизводимый полный inventory и source-map; отдельно получить PD-classes candidate. Затем подготовить независимые fixtures P00.3–P00.6 и `web/` на P01. Не подменять эту работу ещё одним общим архитектурным эссе или красивым непроверенным прототипом.
+После отдельного поручения продолжить реализацию: сверить существующие P00.1/P00.2, дополнить четыре реестра и evidence; затем P01-RULES и независимая подготовка oracle P00.3–P00.6. Не создавать inventory/web заново. Не переходить к массовому контенту раньше согласованных контрактов и точного ядра.
 
-## Шаблон обновления после следующей сессии
+Browser smoke/visual/input/audio сценарии подготавливает агент, выполняет человек. Полученное evidence указывает source/build revision и воспроизводимые условия; пока его нет, соответствующий пункт открыт.
+
+## 7. История контекста
+
+Первичный этап от 2026-09-26 создал восемь файлов контекста в commit `6f4ffdfd40fb31d00625ea24e4285ff2dbee0b60`, закрепил оригинал `ce7f241515fd5c040fcf18b4beb5b7a49d9d535f` и candidate PD-classes. Тогда web/source-map ещё не были созданы. Это историческое состояние, не текущий итог main.
+
+Сохраняемые source facts: Pixel Dungeon 1.9.1/74, grid 32×32, Java float scheduler/HashSet, sprite/next continuation, Java Math.random wrapper и local-hour nightMode. Эти наблюдения не доказывают полного oracle/parity. Исходная идентичность не менялась.
+
+## Шаблон дальнейшего отчёта
 
 ```text
 Дата / рабочий commit:
-Задача PLAN:
-Изменённые файлы:
-Действительно реализованное поведение:
-Исходники и reference fixtures:
-Проверки: точная команда -> результат (или NOT_RUN с причиной):
-Статус паритета:
-Оставшиеся расхождения/блокеры:
+ID задачи PLAN / owner:
+Реально изменённые файлы и поведение:
+Source / reference fixture / provenance:
+Команда проверки -> фактический результат (или NOT_RUN + причина):
+Ручное browser evidence -> источник/commit/условия (или NOT_VERIFIED):
+Статус паритета и policy compliance:
+Открытые расхождения/блокеры:
 Следующий конкретный шаг:
 ```
