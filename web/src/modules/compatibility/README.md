@@ -1,56 +1,69 @@
 # Compatibility / Совместимость Java
 
-## Владелец и границы
+## Владелец и public API
 
-Модуль владеет только семантикой Java-вычислений, необходимой порту. Он не владеет
-игровым миром, глобальным RNG, часами, UI или сохранениями. Runtime API — `index.ts`:
-`JavaRandom`, `toJavaInt`. Единственный внешний контракт — `PDRandomSource` из
-`web/src/types/compatibility/random.d.ts`. Каждый экземпляр получает источник явно;
-создание экземпляра и импорт модуля не расходуют случайные значения.
+Модуль владеет семантикой исходных Java-вычислений и random wrapper, не игровым миром,
+часами, UI, глобальным PRNG или сохранениями. Runtime API через `index.ts`:
+`JavaRandom`, `toJavaInt`. Собственные контракты `PDRandomSource` и
+`PDRandomWeightedEntry<T>` находятся только в `web/src/types/compatibility/random.d.ts`.
+Импорт и конструирование ничего не запускают и не расходуют draws.
 
-`toJavaInt` воспроизводит narrowing conversion: усечение к нулю, насыщение int32,
-NaN → 0, отсутствие отрицательного нуля. Методы `intTo`, `intBetween`, `intRange`,
-`normalIntRange` принимают min/max, уже представленные как signed Java int32;
-проверка неизвестного внешнего ввода не относится к этому внутреннему контракту.
-Float-параметры и float-промежуточные суммы округляются на исходных стадиях.
+`toJavaInt` сохраняет narrowing: усечение, int32 saturation, NaN -> 0, отсутствие -0.
+Integer min/max должны уже быть signed int32. Float-преобразования и промежуточные
+суммы округляются в исходных местах. Проверка неизвестного внешнего ввода — у boundary.
 
-Сейчас перенесены Float() / Float(max) / Float(min,max), Int(max) / Int(min,max),
-IntRange, NormalIntRange и chances(float[]). API TS: float / floatTo /
-floatBetween / intTo / intBetween / intRange / normalIntRange / weightedIndex.
-Map/Collection-операции, oneOf/element/shuffle и production PRNG пока НЕ перенесены.
+Все 16 методов исходного wrapper имеют TS-реализации:
 
-## Проверка
+| Java | TypeScript |
+| --- | --- |
+| Float(), Float(max), Float(min,max) | float, floatTo, floatBetween |
+| Int(max), Int(min,max), IntRange, NormalIntRange | intTo, intBetween, intRange, normalIntRange |
+| chances(float[]), chances(HashMap) | weightedIndex, weightedKey |
+| index(Collection), oneOf | collectionIndex, oneOf |
+| element(array), element(array,max), element(Collection) | element, elementWithin, collectionElement |
+| shuffle(array), shuffle(first,second) | shuffle, shufflePair |
 
-`npm run test:parity:random` компилирует отдельный Java oracle из неизменённого
-исходного Random.java и сравнивает 4982 случая: float bits, int-результаты,
-категорию выхода за границы массива и количество draws. Нужны Node с TS stripping
-и JDK с javac/java. Это не браузерная проверка и не запуск всей Android-игры.
+**Граница коллекций:** collectionElement/collectionIndex принимают snapshot в исходном
+порядке Collection.toArray(); weightedKey — entries в исходном keySet().toArray() order.
+Это НЕ обещание, что JS Map/Set воспроизводят Java HashMap/HashSet. В Java-тесте реальный
+порядок экспортируется oracle и подаётся TS как явный вход. Подбор representation каждого
+владельца коллекции и Android integration остаются отдельной открытой задачей.
 
-`npm run typecheck:compatibility` — strict typecheck без DOM.
-`npm run check:extraction:compatibility` копирует только этот модуль и его собственные
-ambient declarations в `tmp/`, проверяет их отдельно и удаляет временную копию.
-Для выноса нужны эти два каталога и сохранение GPL/авторства; остальная игра не нужна.
+Выбор возвращает исходные ссылки, допускает null; undefined и sparse JS holes не
+представляют Java-элемент. Shuffle изменяет переданный runtime-массив; immutable JSON
+нельзя передавать как изменяемое состояние. Парная версия намеренно сначала меняет first,
+затем second: ошибка second не откатывает уже выполненную мутацию first. Aliased arrays
+обрабатываются в том же порядке, без выдуманной атомарности.
 
-Сохраняется исходная ошибка chances(float[]): пустые/all-zero weights и округление
-random float до суммы могут приводить к выходу за границы. Нет fallback на последний
-элемент. В TS это RangeError; текст/stack Java-исключения не объявлены идентичными.
-Полная карта соответствия и пределы проверки: `docs/port/features/random.md`.
+## Проверки
 
-## Ownership and extraction (English)
+`npm run test:parity:random`: оба suite, **13/13 PASS** в текущем прогоне,
+**4982 scalar + 4260 collection = 9242** сравнения с неизменённым Random.java.
+Проверяются результаты/float bits, draws, ошибки, обе перестановки и частичные мутации.
+Это выбранная матрица, не исчерпывающий перебор и не процент готовности игры.
+`npm run typecheck:compatibility` и `npm run check:extraction:compatibility` проверяют
+модуль только с его declarations, без DOM, adapters и остальных globals.
 
-This module owns Java arithmetic/random-wrapper semantics only. It does not own a
-PRNG or game state. Import the runtime values from index.ts and inject PDRandomSource;
-its own declaration lives in src/types/compatibility/random.d.ts. Integer parameters
-must already be signed int32 values. No framework, DOM, timer, or global random API
-is needed. Extract this module with only its own declarations and retain GPL notices.
+Нужны Node с TS stripping, JDK javac/java и TypeScript. В этой сессии использованы
+Node 22.16.0, JDK 21.0.11, доступный TS 5.8.3; заявленный package.json-набор не установлен.
+Отсутствующий JDK — ошибка, не skipped PASS. Исходный reference проверяется по Git blob.
+Подробности: `docs/port/features/random.md`.
 
-The Java oracle compiles the unmodified pinned reference and controls only its random
-draw source through a test-only same-package Math binding. 4982 comparisons cover
-result bits, narrowing, signed overflow, draw counts and bounds-error outcomes for
-the eight ported wrapper methods plus numeric casts. This is NOT Android integration,
-production PRNG equivalence, collection-order parity or browser verification.
+Сохраняются исходные ошибки weighted selection, а не fallback на последний элемент.
+Пустой float[] ошибочен до draw, пустой map — после draw. Текст/stack Java и JS исключений
+не обещаны идентичными. Production RNG, его checkpoint и потребители draws в игре пока открыты.
 
-Run the three npm commands above. JDK absence is an error, never a skipped PASS.
-Map/Collection operations, oneOf/element/shuffle and production random-state persistence
-remain unimplemented. weightedIndex deliberately retains original failure outcomes;
-Java exception strings/stacks are not part of the demonstrated equivalence.
+## English: ownership, extraction and evidence
+
+Extract this module plus only `src/types/compatibility/`, retain GPL notices and inject
+a caller-owned PDRandomSource. No framework, DOM, global RNG, lifecycle or storage is needed.
+All sixteen wrapper operations are implemented; the collection owner MUST supply the
+original iteration order. Java exports its actual HashMap order in the test; the TS wrapper
+does not pretend to emulate HashMap/HashSet. Selection preserves object identity and null.
+Shuffle accepts mutable runtime arrays, never authored immutable content, and preserves
+partial mutation on failure and aliasing semantics.
+
+Thirteen tests passed: 4982 scalar and 4260 collection comparisons against hash-checked,
+unmodified Java source. Scoped typecheck and extraction passed using TS 5.8.3, not the
+uninstalled project TS 6.0.3. Production random-state generation/persistence, Android
+collection-owner integration, full application build and visual parity remain unverified.

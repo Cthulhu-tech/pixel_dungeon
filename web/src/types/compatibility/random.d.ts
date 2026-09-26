@@ -2,3 +2,9 @@
 interface PDRandomSource {
   nextDouble(): number;
 }
+
+/** Snapshot in the original HashMap key iteration order; keys may be null. */
+interface PDRandomWeightedEntry<T> {
+  readonly key: T;
+  readonly weight: number;
+}

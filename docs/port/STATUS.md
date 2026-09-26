@@ -1,98 +1,76 @@
 # Фактический статус переноса
 
-Обновлено 2026-09-26 после поручения «отлично начинай».
+Обновлено 2026-09-26. Поручение: продолжать последовательно, задачу за задачей.
+PLAN P00–P10 остаётся единственной очередью. Полной играбельной игры пока нет.
 
-## 1. Текущий результат
+## Текущий checkpoint: завершена следующая задача Random
 
-**Реализация начата: добавлен первый изолированный участок compatibility и независимый Java oracle. Полной играбельной браузерной игры ещё нет.**
+Начало продолжения: `93aa9b7dba5e78fbe7e471ce49f137e839ffb8ce`.
+Сохранена предыдущая scalar-реализация. Добавлены остальные восемь wrapper операций:
+collectionIndex, oneOf, element, elementWithin, collectionElement, weightedKey,
+shuffle и shufflePair. Изолированный модуль без Phaser/DOM/global RNG; типы owner-scoped.
 
-Исходный checkpoint этой сессии: `029fac6143cc09cc000b68c4349e1d0e990acc1f`.
-Runtime/test files и их описание записаны в main; завершение записи основного набора до этого отчёта: `643646c8df72bb6ae04a433a212a93f5398eaa23`.
+В независимом Java-harness используются прежние неизменённые Random.java и controlled
+draws. Новый harness экспортирует фактический HashMap порядок и частичные мутации массивов.
+Порядок коллекции передаётся TS как явный вход, не выдумывается из JS Map/Set.
 
-Детальная посимвольная карта, команды и ограничения: [features/random.md](features/random.md). Она детализирует P00.4/P00.5/P02, не создаёт вторую очередь вместо PLAN.
-
-| Область | Реально сделано |
+| Проверка | Фактический результат |
 | --- | --- |
-| Compatibility | Java narrowing to int; три Float overloads, два Int overloads, IntRange, NormalIntRange, chances(float[]) |
-| Ownership | Экземпляр JavaRandom получает PDRandomSource; нет глобального RNG/часов/Phaser/store и import-time запуска |
-| Типы | Собственный контракт в web/src/types/compatibility/random.d.ts, public runtime API через index.ts |
-| Эталон | Неизменённый Random.java из закреплённой PD-classes; Git blob проверяется перед компиляцией |
-| Oracle | Отдельный Java-harness с controlled draws; исходные формулы не переписаны на TS для получения expected |
-| Parity | 7 tests, включая 4982 Java/TS сравнения результатов, float bits, ошибок выбора и числа draws |
-| Extraction | Только модуль и его .d.ts успешно typechecked в отдельном host без DOM и остальных globals проекта |
-| P01-RULES, частично | npm test:e2e теперь выдаёт BLOCKED/exit 2 вместо Playwright; добавлен regression test запрета |
-| Hygiene/docs | root tmp игнорируется; temporary hosts очищаются; module/reference README содержат RU/EN описание |
+| Новый collection suite | 6/6 PASS, 4260 original-Java comparisons |
+| Старый scalar + новый collection suite вместе | 13/13 PASS, 4982 + 4260 = 9242 comparisons; 0 skips |
+| `tsc -p tsconfig.compatibility.json` | PASS; strict без DOM |
+| `node tools/check-compatibility-extraction.mjs` | PASS; только модуль/его declarations в отдельном host |
 
-Старые файлы scaffold, его UI, анимации и алгоритм grid не переписывались. Java-игра в src/, исходные assets/, res/, AndroidManifest.xml и LICENSE.txt не менялись. .gitignore дополнен только root tmp. Package scripts дополнены целевыми проверками; заявленные dependency versions сохранены.
+Команда общего RNG-прогона: `node --experimental-strip-types --test tests/parity/random.test.mjs tests/parity/random-collections.test.mjs` из web. `test:parity:random` обновлён на оба suite.
 
-## 2. Проверки этой сессии
+Окружение: Node 22.16.0, JDK 21.0.11, локальный TS 5.8.3. Через временный локальный symlink
+использован доступный compiler, не выполнена установка заявленного TS 6.0.3 и остальных
+npm packages. Версии проекта не менялись. Полный clone недоступен из-за DNS GitHub;
+относящиеся текстовые файлы восстановлены через connector, исходные blobs сверены.
 
-Окружение реальных локальных прогонов: Node 22.16.0, npm 10.9.2, JDK 21.0.11; доступный TypeScript 5.8.3. Это **не** подтверждение установленного package.json-набора, где указан TypeScript 6.0.3.
+Не запускались: общий npm install/ci, full typecheck/build/architecture gate, Android
+application, браузер или browser automation. Успех подсистемы не означает их прохождение.
 
-| Команда | Результат |
+## Что именно подтверждено и что нет
+
+Все 16 методов исходного Random wrapper теперь имеют реализации и scoped Java evidence.
+Production PRNG, его сохранение, порядок коллекций конкретного Android runtime и поток draws
+всей игры ещё открыты. Поэтому весь Random.java/весь P02 не получают полный VERIFIED.
+`docs/port/features/random.md` содержит symbol mapping и границы доказательства.
+File-level source-map/generated summary пока не агрегируют новый evidence; P00.2 открыт.
+
+Сохранены RNG-001 (weighted array bounds), RNG-002 (разный расход draws у пустых
+коллекций/массивов/map) и RNG-003 (частичная мутация paired shuffle). Нет fallback,
+автоматической нормализации весов или отката исходной частичной мутации.
+
+## Текущие области плана
+
+| Область | Состояние |
 | --- | --- |
-| `git hash-object tests/reference/random/Random.java` | `cc6ce01ae51678da114ee1e0d26485717107704c`, совпадает с upstream blob |
-| из web: `tsc -p tsconfig.compatibility.json` | PASS: strict isolated typecheck на TS 5.8.3 |
-| из web: `node tools/check-compatibility-extraction.mjs` | PASS: отдельный host, только нужные module/declarations |
-| из web: `npm run test:parity:random` | 7/7 PASS, 4982 comparisons, без skipped tests |
-| из web: `node --test tools/browser-check-blocked.test.mjs` | 1/1 PASS |
-| из web: `node tools/browser-check-blocked.mjs` | Ожидаемый BLOCKED/exit 2; браузер не запущен |
+| P00.1/P00.2 | inventory/source-map уже есть; semantic coverage и aggregation открыты |
+| P00.3–P00.5 | Random компилируется изолированно; оба oracle suite работают; полный Android/PD-classes не подтверждён |
+| P00.6 | коллекции владельцев, saves, clocks, callback phases ещё требуют аудита |
+| P01/P01-RULES | scaffold существует; общий toolchain, type imports, shaders и остальные policy gates открыты |
+| P01.5 | extraction compatibility прошёл на доступном compiler |
+| P02 | random wrapper расширен; следующим переносится исходный PathFinder с Java oracle |
+| P03–P10 | завершение не подтверждено; full visual/gameplay parity NOT_VERIFIED |
 
-Прямой git-доступ из локального окружения не работал: `Could not resolve host: github.com`. Нужные текстовые файлы прочитаны/записаны через GitHub connector; локальные проверки выполнены на восстановленном наборе относящихся исходников, не на полном clone репозитория. Доступный TS 5.8.3 использован только для изолированной проверки; версия проекта не понижалась.
+Ничего не создаётся заново вместо существующих inventory/web. Старый `test:e2e` ранее
+заменён явным blocker/exit 2; прямой запуск оставшихся Playwright файлов также запрещён.
+Общий `test:parity` не заменён ложным PASS всего проекта.
 
-**Не выполнялись:** npm install/ci всего приложения, full typecheck/build/lint/architecture gate, запуск всей инвентаризации на обоих Git trees, полный Android build, browser launch/attach/automation и ручная visual/input/audio приёмка. Успех подсистемных проверок не переносится на эти области.
+## История и неприкосновенные источники
 
-## 3. Границы доказанного
+- Baseline: `ce7f241515fd5c040fcf18b4beb5b7a49d9d535f`, Pixel Dungeon 1.9.1/74.
+- PD-classes candidate: `c0b690a4163020963e70a58a7d4f27965dc8f134`.
+- `6f4ffdfd40fb31d00625ea24e4285ff2dbee0b60`: первоначальные документы.
+- `6cc1858e1534b3b826e2ae0cf25e1bf52b2dd1d2`: inventory, source-map, workflow и web scaffold уже существовали.
+- `029fac6143cc09cc000b68c4349e1d0e990acc1f`: согласованный план и адаптация PSX/CORE правил.
+- `93aa9b7dba5e78fbe7e471ce49f137e839ffb8ce`: scalar Random, 7/7 tests и 4982 comparisons; browser blocker 1/1, tmp ignore.
 
-4982 — число случаев выбранной матрицы, не число игровых механик и не процент готовности. Проверено восемь wrapper methods и narrowing conversion на описанных входах. Это не exhaustive перебор IEEE значений.
+Исходные src/assets/res/AndroidManifest/LICENSE не изменены. Изменения этой задачи:
+Random runtime, его declarations, новый Java/test host, package script и документация.
+Новых assets, шейдеров, UI или сохранений нет. Временное только root tmp, не build inputs.
 
-Полный Random ещё не перенесён: остаются HashMap/Collection, index/oneOf/element/shuffle, production random-source implementation, его сохранение и потребление случайности остальной игрой. Совместимость Java Math.random и JS Math.random по одному seed не заявляется.
-
-Выявленный RNG-001: исходный chances(float[]) может выходить за границы на пустых/нулевых weights и при float32 rounding до полной суммы. Исход неуспешного выбора сохранён, fallback не добавлен. Java exception text/stack не обещаны идентичными JS RangeError. Подробности и регрессии находятся в feature evidence.
-
-File-level source-map/generated summary пока не регенерированы и не агрегируют новый посимвольный отчёт. Это открытая часть P00.2; не ставить VERIFIED всему Random.java и не сбрасывать существующие строки. Полнота source/content/UI реестров по-прежнему не подтверждена.
-
-## 4. Этапы и оставшиеся блокеры
-
-| Этап/область | Статус и остаток |
-| --- | --- |
-| План и обязательные правила | Сохранены; PLAN остаётся единственной очередью |
-| P00.1/P00.2 | IN_PROGRESS: inventory/source-map существуют; аудит полноты и агрегирование feature evidence остаются |
-| P00.3 | Random reference компилируется изолированно; совместимость всей PD-classes с Android-игрой не подтверждена |
-| P00.4/P00.5 | Первый numeric/Random oracle реализован и проверен; остальные эталоны нужны |
-| P00.6 | HashSet ties, callback phases, saves, clocks и presentation random ещё требуют полного обследования |
-| P01 | IN_PROGRESS: full package installation/lockfile/build/integration не подтверждены |
-| P01-RULES | Частично: заблокирован npm browser entry; старые type imports, contracts placement, shader-only path и остальные policy tests остаются |
-| P01.5 | Extraction нового compatibility проверен локальным TS; целевой набор npm versions и общий gate ещё не проверены |
-| P02 | IN_PROGRESS: первая numeric/Random часть реализована; очередь Actor, pathfinding/FOV/ballistics не перенесены |
-| P03–P10 | Завершение не подтверждено; первый полный игровой сценарий ещё отсутствует |
-| Полный перенос / полный паритет | NOT_COMPLETE / NOT_VERIFIED |
-
-Старые Playwright test/config и dev dependency пока сохранены, не запускались; изменён только npm entry, теперь завершающийся с явным запретом. Нельзя запускать их напрямую или через workflow. Общий test:parity не превращён в ложный PASS всей игры.
-
-## 5. Следующий конкретный участок по PLAN
-
-Согласовать P00.2 file-level inventory с новым symbol-level evidence, продолжить P01-RULES для существующих type imports/контрактов и реального toolchain. В ядре — оставшиеся Random array/collection операции с отдельной проверкой порядка; затем исходные PathFinder/Actor fixtures. Независимая подготовка эталонов не ждёт ручной browser-проверки, но массовый контент не начинается без согласованных контрактов.
-
-## 6. Сохранённая история
-
-- Эталон игры: `ce7f241515fd5c040fcf18b4beb5b7a49d9d535f`, Pixel Dungeon 1.9.1 / 74. Candidate PD-classes: `c0b690a4163020963e70a58a7d4f27965dc8f134`. Source identity не менялась.
-- `6f4ffdfd40fb31d00625ea24e4285ff2dbee0b60`: первоначальный контекст; тогда web/source-map отсутствовали.
-- `6cc1858e1534b3b826e2ae0cf25e1bf52b2dd1d2`: уже присутствовали inventory tool/tests, generated inventory/summary/source-map, audit workflow, web scaffold и тестовые файлы. Они не созданы заново и не обнулены.
-- `029fac6143cc09cc000b68c4349e1d0e990acc1f`: согласованный план и правила из PSX `9adcf519b8e47c3bdbc5e5c52b78f418715e597f` / CORE `8b8d7aed0808d2f809de542e77c47f7e53b91915`. Приватные configs/assets не переносились.
-
-Исходные наблюдения сохраняются: grid 32×32; float scheduler/HashSet; sprite/next continuation; Java Math.random wrapper; local-hour nightMode. Они не доказывают полного паритета.
-
-## Шаблон следующего отчёта
-
-```text
-Дата / рабочий commit:
-ID задачи PLAN / owner:
-Реально изменённые файлы и поведение:
-Source / reference fixture / provenance:
-Команда -> фактический результат (либо NOT_RUN и причина):
-Версии инструментов и область проверки:
-Ручное browser evidence (либо NOT_VERIFIED):
-Открытые расхождения/блокеры:
-Следующий конкретный шаг:
-```
+Следующий участок: исходный PathFinder, независимое сравнение точного пути/шага/отступления,
+а затем соседние алгоритмы grid. Browser evidence по-прежнему ручной и пока отсутствует.

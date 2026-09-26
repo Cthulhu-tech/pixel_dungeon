@@ -6,7 +6,7 @@
  */
 import { toJavaInt } from './numbers.ts';
 
-/** Ports scalar overloads and float-array chances, not a new PRNG algorithm. */
+/** Ports the original random wrapper; collection order is supplied by its owner. */
 export class JavaRandom {
   private readonly source: PDRandomSource;
 
@@ -64,6 +64,77 @@ export class JavaRandom {
       sum = Math.fround(sum + this.floatAt(weights, i + 1));
     }
     return 0;
+  }
+
+  /** Caller supplies the original Collection.toArray() order, not a JS Set policy. */
+  collectionIndex(values: readonly unknown[]): number {
+    // Unlike Int(max), the original index(empty) still consumes one draw.
+    return toJavaInt(this.source.nextDouble() * values.length);
+  }
+
+  oneOf<T>(...values: T[]): T {
+    return this.elementAt(values, toJavaInt(this.source.nextDouble() * values.length));
+  }
+
+  element<T>(values: readonly T[]): T {
+    return this.elementWithin(values, values.length);
+  }
+
+  /** max is an original signed Java int, deliberately not clamped to array length. */
+  elementWithin<T>(values: readonly T[], max: number): T {
+    return this.elementAt(values, toJavaInt(this.source.nextDouble() * max));
+  }
+
+  collectionElement<T>(values: readonly T[]): T | null {
+    return values.length > 0 ? this.elementAt(values, this.intTo(values.length)) : null;
+  }
+
+  /** Entries MUST follow the original map keySet().toArray() order. */
+  weightedKey<T>(entries: readonly PDRandomWeightedEntry<T>[]): T | null {
+    let sum = 0;
+    for (let i = 0; i < entries.length; i++) {
+      sum = Math.fround(sum + Math.fround(this.elementAt(entries, i).weight));
+    }
+    const value = this.floatTo(sum);
+    // An empty HashMap fails AFTER the draw, unlike the float[] overload.
+    sum = Math.fround(this.elementAt(entries, 0).weight);
+    for (let i = 0; i < entries.length; i++) {
+      if (value < sum) return this.elementAt(entries, i).key;
+      sum = Math.fround(sum + Math.fround(this.elementAt(entries, i + 1).weight));
+    }
+    return null;
+  }
+
+  /** Mutates the caller-owned runtime array using the source's forward shuffle. */
+  shuffle<T>(values: T[]): void {
+    for (let i = 0; i < values.length - 1; i++) {
+      const j = this.intBetween(i, values.length);
+      if (j !== i) this.swap(values, i, j);
+    }
+  }
+
+  shufflePair<U, V>(first: U[], second: V[]): void {
+    for (let i = 0; i < first.length - 1; i++) {
+      const j = this.intBetween(i, first.length);
+      if (j !== i) {
+        // Order matters: first is already mutated if second has an invalid index.
+        this.swap(first, i, j);
+        this.swap(second, i, j);
+      }
+    }
+  }
+
+  private swap<T>(values: T[], i: number, j: number): void {
+    const previous = this.elementAt(values, i);
+    values[i] = this.elementAt(values, j);
+    values[j] = previous;
+  }
+
+  private elementAt<T>(values: readonly T[], index: number): T {
+    const value = values[index];
+    // Java arrays can contain null, but neither undefined nor sparse JS holes.
+    if (value === undefined) throw new RangeError(`Java array index ${index} outside populated length ${values.length}`);
+    return value;
   }
 
   private floatAt(values: readonly number[], index: number): number {

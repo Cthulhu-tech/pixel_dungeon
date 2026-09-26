@@ -20,7 +20,7 @@
     "test:unit": "node --experimental-strip-types --test tests/unit/*.test.mjs",
     "test:contracts": "node --test tests/contracts/*.test.mjs",
     "test:parity": "node tools/parity-gate.mjs",
-    "test:parity:random": "node --experimental-strip-types --test tests/parity/random.test.mjs",
+    "test:parity:random": "node --experimental-strip-types --test tests/parity/random.test.mjs tests/parity/random-collections.test.mjs",
     "test:e2e": "node tools/browser-check-blocked.mjs",
     "test:tools": "node --test tools/*.test.mjs"
   },
