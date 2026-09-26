@@ -18,6 +18,6 @@
     "src/modules/compatibility/index.ts",
     "src/types/grid/pathfinding.d.ts",
     "src/modules/grid/index.ts",
-    "src/types/grid/ballistics.d.ts"
+    "src/types/grid/ballistics.d.ts",
+    "src/types/grid/visibility.d.ts"
   ]
-}

@@ -25,7 +25,8 @@
     "test:parity:random": "node --experimental-strip-types --test tests/parity/random.test.mjs tests/parity/random-collections.test.mjs",
     "test:parity:pathfinding": "node --experimental-strip-types --test tests/parity/pathfinding.test.mjs",
     "test:parity:ballistics": "node --experimental-strip-types --test tests/parity/ballistics.test.mjs",
-    "test:parity:kernel": "node --experimental-strip-types --test tests/parity/random.test.mjs tests/parity/random-collections.test.mjs tests/parity/pathfinding.test.mjs tests/parity/ballistics.test.mjs",
+    "test:parity:visibility": "node --experimental-strip-types --test tests/parity/visibility.test.mjs",
+    "test:parity:kernel": "node --experimental-strip-types --test tests/parity/random.test.mjs tests/parity/random-collections.test.mjs tests/parity/pathfinding.test.mjs tests/parity/ballistics.test.mjs tests/parity/visibility.test.mjs",
     "test:e2e": "node tools/browser-check-blocked.mjs",
     "test:tools": "node --test tools/*.test.mjs"
   },
