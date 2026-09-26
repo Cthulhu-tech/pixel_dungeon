@@ -1,0 +1,12 @@
+{
+  "title": "INFRASTRUCTURE TEST",
+  "notice": "Not the original game interface.",
+  "toggle": "Toggle state",
+  "restart": "Restart scene",
+  "phase": {
+    "loading": "Loading",
+    "ready": "Ready",
+    "paused": "Paused",
+    "failed": "Failed"
+  }
+}

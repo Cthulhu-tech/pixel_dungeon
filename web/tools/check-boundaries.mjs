@@ -4,7 +4,7 @@ import { resolve, relative, sep } from 'node:path';
 import { pathToFileURL } from 'node:url';
 const slash = (s) => s.split(sep).join('/');
 function filesAt(root) {
-  return readdirSync(root, { withFileTypes: true }).flatMap((e) => e.isDirectory() ? filesAt(resolve(root, e.name)) : /(?:\.[cm]?tsx?|\.json)$/.test(e.name) ? [resolve(root, e.name)] : []);
+  return readdirSync(root, { withFileTypes: true }).flatMap((e) => e.isDirectory() ? filesAt(resolve(root, e.name)) : /(?:\.[cm]?tsx?|\.json|\.glsl)$/.test(e.name) ? [resolve(root, e.name)] : []);
 }
 /** A property/declaration name is not a read of the homonymous global API. */
 function isPropertyOrDeclarationName(node) {
@@ -26,12 +26,22 @@ export function checkBoundaries(root = resolve('src')) {
   const files = filesAt(root); const known = new Set(files); const edges = new Map(); const errors = [];
   const forbidden = new Set(['window', 'document', 'globalThis', 'localStorage', 'sessionStorage', 'indexedDB', 'navigator', 'fetch', 'XMLHttpRequest', 'Audio', 'AudioContext', 'Date', 'setTimeout', 'setInterval', 'requestAnimationFrame', 'performance', 'process', 'require']);
   for (const file of files) {
-    if (file.endsWith('.json')) continue;
+    if (file.endsWith('.json') || file.endsWith('.glsl')) continue;
     const name = slash(relative(root, file)); const module = /^modules\/([^/]+)\//.exec(name)?.[1];
     const source = ts.createSourceFile(file, readFileSync(file, 'utf8'), ts.ScriptTarget.Latest, true);
     const dependencies = []; edges.set(file, dependencies);
+    const shaderImports = new Set(source.statements.filter(ts.isImportDeclaration)
+      .filter(node => ts.isStringLiteral(node.moduleSpecifier) && node.moduleSpecifier.text.endsWith('.glsl?raw'))
+      .map(node => node.importClause?.name?.text));
     const fail = (node, why) => errors.push(`${name}:${source.getLineAndCharacterOfPosition(node.getStart(source)).line + 1}: ${why}`);
     function dependency(node, specifier) {
+      if (specifier.endsWith('.glsl?raw')) {
+        const target = slash(relative(root, resolve(file, '..', specifier.slice(0, -4))));
+        const owner = /^adapters\/([^/]+)\//.exec(name)?.[1];
+        if (!owner || !target.startsWith(`adapters/${owner}/shaders/`) || !known.has(resolve(root, target)))
+          fail(node, 'Shader sources must be physical owning-adapter .glsl files');
+        return;
+      }
       if (!specifier.startsWith('.')) {
         if (module || name.startsWith('contracts/')) fail(node, `External or aliased dependency forbidden in pure code: ${specifier}`);
         return;
@@ -51,6 +61,22 @@ export function checkBoundaries(root = resolve('src')) {
       if (name.startsWith('contracts/') && !dest.startsWith('contracts/')) fail(node, `Shared contracts must not import implementations: ${dest}`);
     }
     function visit(node) {
+      if ((ts.isTypeAliasDeclaration(node) || ts.isInterfaceDeclaration(node)) &&
+        !(name.startsWith('types/') && name.endsWith('.d.ts')))
+        fail(node, 'Own type/interface declarations belong to types/<owner>/*.d.ts');
+      if (name.startsWith('types/') && node.modifiers?.some(m => m.kind === ts.SyntaxKind.ExportKeyword))
+        fail(node, 'Owner declarations must be ambient, not exported');
+      if (ts.isImportTypeNode(node) || (ts.isImportDeclaration(node) && node.importClause?.isTypeOnly) ||
+        (ts.isImportSpecifier(node) && node.isTypeOnly) || (ts.isExportDeclaration(node) && node.isTypeOnly) ||
+        (ts.isExportSpecifier(node) && node.isTypeOnly)) fail(node, 'Type imports/exports are forbidden');
+      if (ts.isPropertyAssignment(node) && ['vertexSource', 'fragmentSource'].includes(node.name.getText(source))) {
+        if (!ts.isIdentifier(node.initializer) || !shaderImports.has(node.initializer.text))
+          fail(node, 'Shader source must be an unmodified physical GLSL import');
+      }
+      if (ts.isShorthandPropertyAssignment(node) && ['vertexSource', 'fragmentSource'].includes(node.name.text)
+        && !shaderImports.has(node.name.text)) fail(node, 'Shader source must be an unmodified physical GLSL import');
+      if ((ts.isStringLiteral(node) || ts.isNoSubstitutionTemplateLiteral(node)) && /void\s+main\s*\(/.test(node.text))
+        fail(node, 'Inline GLSL is forbidden');
       if (ts.isImportDeclaration(node) || ts.isExportDeclaration(node)) {
         if (node.moduleSpecifier && ts.isStringLiteral(node.moduleSpecifier)) dependency(node, node.moduleSpecifier.text);
       }

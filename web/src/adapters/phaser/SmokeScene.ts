@@ -1,38 +1,46 @@
 import Phaser from 'phaser';
-import type RexUIPlugin from 'phaser4-rex-plugins/templates/ui/ui-plugin.js';
-import type { ReadonlyShellView } from '../../contracts/presentation.ts';
-import { LEVEL_WIDTH, LEVEL_HEIGHT } from '../../modules/grid/index.ts';
-const amuletUrl = new URL('../../../../assets/amulet.png', import.meta.url).href;
+import { bindCommandButton } from '../rex-ui/command-button.ts';
+import { originalSmokeAssets } from './assets/original.ts';
+import text from './assets/smoke.en.json' with { type: 'json' };
+import vertexSource from './shaders/original-sprite.vert.glsl?raw';
+import fragmentSource from './shaders/original-sprite.frag.glsl?raw';
+
+/** Explicitly an infrastructure screen, not a claimed original game scene. */
 export class SmokeScene extends Phaser.Scene {
-  declare rexUI: RexUIPlugin;
-  private readonly view: ReadonlyShellView;
-  private readonly toggle: () => void;
-  private readonly ready: () => void;
-  constructor(view: ReadonlyShellView, toggle: () => void, ready: () => void) {
-    super('smoke'); this.view = view; this.toggle = toggle; this.ready = ready;
+  private readonly view: PDReadonlyShellView;
+  private readonly commands: PDShellCommands;
+  constructor(view: PDReadonlyShellView, commands: PDShellCommands) {
+    super('smoke'); this.view = view; this.commands = commands;
   }
   preload(): void {
-    this.load.on('loaderror', (file: { key: string }) => { throw new Error(`Failed asset: ${file.key}`); });
-    this.load.image('original-amulet', amuletUrl);
+    const onError = (file: Phaser.Loader.File): void => this.commands.fail(new Error(`Asset failed: ${file.key}`));
+    this.load.on('loaderror', onError);
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => this.load.off('loaderror', onError));
+    if (!this.textures.exists('original-amulet')) this.load.image('original-amulet', originalSmokeAssets().amulet);
   }
   create(): void {
-    this.add.text(16, 12, 'INFRASTRUCTURE TEST', { fontSize: '16px' });
-    this.add.image(160, 68, 'original-amulet').setScale(3);
-    const label = this.add.text(0, 0, '', { fontSize: '14px' });
-    const button = this.rexUI.add.label({
-      x: 160, y: 150, width: 240, height: 44,
-      background: this.add.rectangle(0, 0, 240, 44, 0x343434),
-      text: label, align: 'center',
-    }).layout().setInteractive();
-    const render = (): void => { label.setText(`State: ${this.view.getSnapshot().phase} — click`); button.layout(); };
+    if (this.view.getSnapshot().phase === 'failed') return;
+    this.add.text(16, 12, text.title, { fontSize: '16px' });
+    const texture = this.textures.get('original-amulet');
+    const frame = texture.get();
+    this.add.shader({ name: 'pd-original-sprite', vertexSource, fragmentSource,
+      initialUniforms: { uTexture: 0 } }, 160, 70, frame.width, frame.height, ['original-amulet']).setScale(3);
+    const label = this.add.text(16, 110, '', { fontSize: '14px' });
+    const toggle = this.add.text(16, 145, text.toggle, { fontSize: '14px' });
+    const restart = this.add.text(16, 175, text.restart, { fontSize: '14px' });
+    this.add.text(16, 215, text.notice, { fontSize: '12px' });
+    const render = (): void => { label.setText(text.phase[this.view.getSnapshot().phase]); };
     const unsubscribe = this.view.subscribe(render);
-    button.on('pointerup', this.toggle);
-    this.input.keyboard?.on('keydown-SPACE', this.toggle);
-    this.add.text(16, 200, `Original grid: ${LEVEL_WIDTH} x ${LEVEL_HEIGHT}`, { fontSize: '12px' });
-    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
-      unsubscribe(); button.off('pointerup', this.toggle);
-      this.input.keyboard?.off('keydown-SPACE', this.toggle);
+    const unbindToggle = bindCommandButton(toggle, this.commands.toggle);
+    const unbindRestart = bindCommandButton(restart, () => {
+      this.commands.restart();
+      if (this.view.getSnapshot().phase === 'loading') this.scene.restart();
     });
-    this.ready(); render();
+    this.input.keyboard?.on('keydown-SPACE', this.commands.toggle);
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+      unsubscribe(); unbindToggle(); unbindRestart();
+      this.input.keyboard?.off('keydown-SPACE', this.commands.toggle);
+    });
+    this.commands.ready(); render();
   }
 }

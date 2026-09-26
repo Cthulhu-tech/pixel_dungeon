@@ -33,8 +33,8 @@
     "test:parity:visibility": "node --experimental-strip-types --test tests/parity/visibility.test.mjs",
     "test:parity:turns": "node --experimental-strip-types --test tests/parity/turns.test.mjs",
     "test:parity:character": "node --experimental-strip-types --test tests/parity/character-source.test.mjs tests/parity/character.test.mjs",
-    "test:parity:kernel": "node --experimental-strip-types --test tests/parity/random.test.mjs tests/parity/random-collections.test.mjs tests/parity/pathfinding.test.mjs tests/parity/ballistics.test.mjs tests/parity/visibility.test.mjs tests/parity/turns.test.mjs tests/parity/navigation.test.mjs tests/parity/character-source.test.mjs tests/parity/character.test.mjs tests/parity/movement-source.test.mjs tests/parity/movement.test.mjs tests/parity/buffs.test.mjs tests/parity/character-buffs.test.mjs tests/parity/status-effects.test.mjs tests/parity/resource-effects.test.mjs",
-    "test:kernel": "node --experimental-strip-types --test tests/parity/random.test.mjs tests/parity/random-collections.test.mjs tests/parity/pathfinding.test.mjs tests/parity/ballistics.test.mjs tests/parity/visibility.test.mjs tests/parity/turns.test.mjs tests/contracts/turn-continuations.test.mjs tests/parity/navigation.test.mjs tests/parity/character-source.test.mjs tests/parity/character.test.mjs tests/contracts/character.test.mjs tests/contracts/character-turns.test.mjs tests/parity/movement-source.test.mjs tests/parity/movement.test.mjs tests/parity/buffs.test.mjs tests/contracts/movement-buffs-turns.test.mjs tests/parity/character-buffs.test.mjs tests/contracts/character-buffs-turns.test.mjs tests/parity/status-effects.test.mjs tests/contracts/status-effects.test.mjs tests/parity/resource-effects.test.mjs tests/contracts/resource-effects.test.mjs",
+    "test:parity:kernel": "node --experimental-strip-types --test tests/parity/*.test.mjs",
+    "test:kernel": "node --experimental-strip-types --test tests/parity/*.test.mjs tests/contracts/*.test.mjs",
     "test:e2e": "node tools/browser-check-blocked.mjs",
     "test:tools": "node --test tools/*.test.mjs",
     "test:parity:navigation": "node --experimental-strip-types --test tests/parity/navigation.test.mjs",
@@ -48,17 +48,17 @@
     "test:parity:character-buffs": "node --experimental-strip-types --test tests/parity/character-buffs.test.mjs",
     "test:parity:status-effects": "node --experimental-strip-types --test tests/parity/status-effects.test.mjs",
     "test:parity:resource-effects": "node --experimental-strip-types --test tests/parity/resource-effects.test.mjs",
-    "typecheck:run": "tsc -p tsconfig.run.json"
+    "typecheck:run": "tsc -p tsconfig.run.json",
+    "test:application": "node --experimental-strip-types --test tests/application/*.test.mjs"
   },
   "dependencies": {
-    "phaser": "4.2.1",
+    "phaser": "4.1.0",
     "phaser4-rex-plugins": "4.2.0",
-    "xstate": "5.33.2",
+    "xstate": "4.38.3",
     "zustand": "5.0.15"
   },
   "devDependencies": {
     "typescript": "6.0.3",
-    "vite": "8.3.1",
-    "@playwright/test": "1.63.0"
+    "vite": "8.3.1"
   }
 }

@@ -31,7 +31,8 @@ test('browser/time/random APIs and explicit any are rejected', (t) => {
 });
 test('dynamic imports, re-exports and type imports obey boundaries', (t) => {
   const errors = check(t, { 'modules/a/index.ts': "export * from 'phaser'; const a=import('zustand'); type B=import('xstate').Actor; const x=import(name);" });
-  assert.equal(errors.length, 4);
+  assert.ok(errors.some(e => e.includes('Type imports')));
+  assert.ok(errors.some(e => e.includes('Computed dynamic imports')));
 });
 
 test('a scheduler process method and port properties are not Node or browser globals', (t) => {
@@ -50,4 +51,24 @@ test('trusted owner JSON imports are allowed but another module assets are not',
   files['modules/a/index.ts'] = "import data from '../b/assets/data.json' with {type:'json'};";
   files['modules/b/assets/data.json'] = '{"n":1}';
   assert.ok(check(t, files).some(e => e.includes('owning module assets')));
+});
+
+test('ambient owner declarations pass, own type definitions and type imports outside them fail', t => {
+  assert.deepEqual(check(t, {'types/test/ports.d.ts': 'interface PDTest { value: number }',
+    'modules/a/index.ts': 'export function read(input: PDTest) {return input.value;}'}), []);
+  const errors=check(t, {'app/a.ts': "export type A=number; interface B{}; import type T from 'xstate';",
+    'types/a/ports.d.ts': 'export interface Bad {}'});
+  assert.equal(errors.filter(e=>e.includes('Own type/interface')).length,2);
+  assert.ok(errors.some(e=>e.includes('Type imports')));
+  assert.ok(errors.some(e=>e.includes('ambient, not exported')));
+});
+test('physical owner shaders pass; inline/generated/cross-owner shader sources fail', t => {
+  const files={'adapters/phaser/shaders/sprite.frag.glsl': 'void main(){}',
+    'adapters/phaser/a.ts': "import fragmentSource from './shaders/sprite.frag.glsl?raw'; export const shader={fragmentSource};"};
+  assert.deepEqual(check(t,files),[]);
+  const errors=check(t,{...files,'adapters/other/a.ts': "import fs from '../phaser/shaders/sprite.frag.glsl?raw';",
+    'adapters/phaser/b.ts': "const fragmentSource='void main(){}'; export const shader={fragmentSource};"});
+  assert.ok(errors.some(e=>e.includes('owning-adapter')));
+  assert.ok(errors.some(e=>e.includes('Inline GLSL')));
+  assert.ok(errors.some(e=>e.includes('unmodified physical')));
 });
