@@ -51,3 +51,34 @@ World/actor/pathfinder/door ports связывает вызывающий host. 
 
 Это не готовые уровни, полноценные Hero/Mob, UI или browser parity. Неперенесённые части не
 подменяются тестовыми соседями в runtime; tests/reference остаётся только эталонным harness.
+
+## TerrainGrid / Состояние клеток уровня
+
+`TerrainGrid` owns the transferred runtime `Int32Array` map and nine derived masks. The caller
+relinquishes mutation of that array. `tileAt` and `mask` are read-only query boundaries;
+`snapshot` returns detached runtime data. This is not authored-content cloning or a save parser.
+`paint` is Painter.set's raw generation phase; `set` also updates masks, while `buildFlagMaps`
+performs the original boundary masking and water/pit stitching. `cleanWalls` updates discoverability.
+`destroy` retains flooding checks and neighbour order. No implicit FOV refresh, sound or turn charge.
+
+Сохранены различия source phases: build закрывает границы, set этого не делает; set сначала
+меняет map и лишь затем обращается к Terrain.flags. Флаг water в set использует ID, в build —
+LIQUID bit. Повторный build/clean не скрывается в каждом запросе. Двери подключаются через
+существующий GridDoors, который вызывает set и observe в исходном порядке.
+`terrain.json` — исходные constants/flags/discoveries, выгруженные Java TerrainData. Данные
+читаются напрямую, без schema/normalization/default pipeline. Default discover — identity,
+как ветка default исходного switch. Числовые terrain IDs — игровой контент, не asset URLs.
+
+## LevelSight / Полный базовый обзор персонажа
+
+One `LevelSight` per level owns the reusable FOV output; it is shared across that level's actor
+queries, not across runs. Actor HP/position/status and world mobs/heaps are narrow query ports.
+It composes the existing `GridShadowCaster` with original Blindness/Shadows, MindVision,
+Huntress distance-two sensing and Awareness. Borrowed output changes on the next query;
+`snapshot` does not. Query order, full-mask discoverability intersection and partial bounds
+failures are preserved. This is Level.updateFieldOfView, not Dungeon.observe or fog rendering.
+
+Read `docs/port/features/terrain-sight.md` for provenance, commands and evidence. Extraction
+requires grid declarations including terrain.d.ts/level-sight.d.ts, assets/terrain.json and
+its existing compatibility dependency. Full Level generation, visited/mapped saves, item
+placement, press/traps and production actor composition remain separate unfinished tasks.

@@ -18,3 +18,11 @@ export function gridDistance(first: number, second: number, width: number): numb
 export function gridNeighbours8(width: number): readonly number[] {
   return [1, -1, width, -width, (1 + width) | 0, (1 - width) | 0, (width - 1) | 0, (-1 - width) | 0];
 }
+
+// Single source for Level's fixed dimensions and iteration order.
+export const LEVEL_WIDTH = 32;
+export const LEVEL_HEIGHT = 32;
+export const LEVEL_LENGTH = LEVEL_WIDTH * LEVEL_HEIGHT;
+export const NEIGHBOURS4: readonly number[] = Object.freeze([-LEVEL_WIDTH, 1, LEVEL_WIDTH, -1]);
+export const NEIGHBOURS8: readonly number[] = Object.freeze(gridNeighbours8(LEVEL_WIDTH));
+export const NEIGHBOURS9: readonly number[] = Object.freeze([0, ...NEIGHBOURS8]);

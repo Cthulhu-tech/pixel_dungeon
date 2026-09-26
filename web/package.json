@@ -49,7 +49,9 @@
     "test:parity:status-effects": "node --experimental-strip-types --test tests/parity/status-effects.test.mjs",
     "test:parity:resource-effects": "node --experimental-strip-types --test tests/parity/resource-effects.test.mjs",
     "typecheck:run": "tsc -p tsconfig.run.json",
-    "test:application": "node --experimental-strip-types --test tests/application/*.test.mjs"
+    "test:application": "node --experimental-strip-types --test tests/application/*.test.mjs",
+    "test:parity:terrain": "node --experimental-strip-types --test tests/parity/terrain.test.mjs",
+    "test:parity:level-sight": "node --experimental-strip-types --test tests/parity/level-sight.test.mjs"
   },
   "dependencies": {
     "phaser": "4.1.0",

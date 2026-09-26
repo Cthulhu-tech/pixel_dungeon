@@ -1,0 +1,105 @@
+/* Test-only Level host. Selected methods inserted unchanged from hash-pinned Level.java.
+ * Original code: Oleg Dolya (C) 2012-2015, GPL-3.0-or-later.
+ * These neighbours provide inputs, not production Actor/Item/Level implementations.
+ */
+package com.watabou.pixeldungeon.levels;
+import java.util.*;
+import java.io.*;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+
+public class Level {
+  // ORIGINAL_LEVEL_CONSTANTS
+  public int[] map;
+  public static boolean[] passable,losBlocking,flamable,secret,solid,avoid,water,pit,discoverable,fieldOfView;
+  final ArrayList<Mob> mobs = new LoggedList<>("mobs");
+  final HeapMap heaps = new HeapMap();
+  static final ArrayList<String> trace = new ArrayList<>();
+  // ORIGINAL_LEVEL_METHODS
+
+  static void reset() {
+    passable=new boolean[LENGTH];losBlocking=new boolean[LENGTH];flamable=new boolean[LENGTH];
+    secret=new boolean[LENGTH];solid=new boolean[LENGTH];avoid=new boolean[LENGTH];
+    water=new boolean[LENGTH];pit=new boolean[LENGTH];discoverable=new boolean[LENGTH];fieldOfView=new boolean[LENGTH];
+    Dungeon.level=new Level();trace.clear();
+  }
+  static int[] ints(String value){if(value.isEmpty())return new int[0];return Arrays.stream(value.split(",")).mapToInt(Integer::parseInt).toArray();}
+  static boolean[] bits(String value){boolean[] result=new boolean[value.length()];for(int i=0;i<result.length;i++)result[i]=value.charAt(i)=='1';return result;}
+  static String bits(boolean[] value){StringBuilder out=new StringBuilder();for(boolean b:value)out.append(b?'1':'0');return out.toString();}
+  static String failure(Exception e){return e instanceof IllegalArgumentException ? "illegal-range" : e instanceof IndexOutOfBoundsException ? "bounds" : e.getClass().getSimpleName();}
+  static String digest() throws Exception {
+    StringBuilder state = new StringBuilder();
+    for(int i=0;i<Dungeon.level.map.length;i++){if(i>0)state.append(',');state.append(Dungeon.level.map[i]);}
+    boolean[][] arrays={passable,losBlocking,flamable,secret,solid,avoid,water,pit,discoverable};
+    for(boolean[] a:arrays)state.append('|').append(bits(a));
+    return HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(state.toString().getBytes(StandardCharsets.UTF_8)));
+  }
+  static void terrain(String line) throws Exception {
+    reset();String[] parts=line.split("\\|",-1);Dungeon.level.map=ints(parts[0]);StringJoiner rows=new StringJoiner("\t");
+    for(String command:parts[1].split(";")){
+      String result="ok";String[] op=command.split(",");
+      try{switch(op[0]){
+        case "build":Dungeon.level.buildFlagMaps();break;
+        case "clean":Dungeon.level.cleanWalls();break;
+        case "set":set(Integer.parseInt(op[1]),Integer.parseInt(op[2]));break;
+        case "destroy":Dungeon.level.destroy(Integer.parseInt(op[1]));break;
+        case "water":result="value:"+Dungeon.level.getWaterTile(Integer.parseInt(op[1]));break;
+        default:throw new IllegalArgumentException("Unknown test command");
+      }}catch(Exception e){result=failure(e);}
+      rows.add(result+":"+digest());
+    }
+    System.out.println(rows);
+  }
+  static void sight(String line){
+    reset();String[] p=line.split("\\|",-1);int flags=Integer.parseInt(p[2]);
+    Char actor=(flags&8)!=0?new Hero():new Char(); actor.pos=Integer.parseInt(p[0]);actor.viewDistance=Integer.parseInt(p[1]);actor.flags=flags;
+    for(int d:ints(p[3]))actor.distances.add(new MindVision(d));Dungeon.hero=(flags&8)!=0?(Hero)actor:new Hero();
+    if(actor instanceof Hero)((Hero)actor).heroClass=(flags&16)!=0?HeroClass.HUNTRESS:HeroClass.WARRIOR;
+    for(int pos:ints(p[4])){Mob mob=new Mob();mob.pos=pos;Dungeon.level.mobs.add(mob);}
+    for(int pos:ints(p[5])){Heap heap=new Heap();heap.pos=pos;Dungeon.level.heaps.entries.add(heap);}
+    losBlocking=bits(p[6]);discoverable=bits(p[7]);
+    if(p[8].equals("1")){Char warm=new Char();warm.flags=4;warm.pos=528;warm.viewDistance=8;Dungeon.level.updateFieldOfView(warm);trace.clear();}
+    String result="ok";try{Dungeon.level.updateFieldOfView(actor);}catch(Exception e){result=failure(e);}
+    System.out.println(result+"|"+bits(fieldOfView)+"|"+String.join(",",trace));
+  }
+  public static void main(String[] args) throws Exception {
+    BufferedReader reader=new BufferedReader(new InputStreamReader(System.in,StandardCharsets.UTF_8));
+    for(String line;(line=reader.readLine())!=null;){if(args[0].equals("terrain"))terrain(line);else sight(line);}
+  }
+}
+class Dungeon {static Level level;static Hero hero;}
+class Painter {
+  // ORIGINAL_PAINTER_METHOD
+}
+class ShadowCaster {
+  static void castShadow(int x,int y,boolean[] output,int distance){
+    Level.trace.add("cast");com.watabou.pixeldungeon.mechanics.ShadowCaster.castShadow(x,y,output,distance);
+  }
+}
+class Buff {}
+class Blindness extends Buff {}
+class Shadows extends Buff {}
+class Awareness extends Buff {}
+class MindVision extends Buff {int distance;MindVision(int d){distance=d;}}
+class Char {
+  int pos,viewDistance,flags;
+  LinkedHashSet<MindVision> distances=new LinkedHashSet<>();
+  boolean isAlive(){Level.trace.add("alive");return(flags&4)!=0;}
+  Buff buff(Class<?> kind){
+    Level.trace.add("buff:"+kind.getSimpleName());
+    if(kind==Blindness.class&&(flags&1)!=0)return new Blindness();
+    if(kind==Shadows.class&&(flags&2)!=0)return new Shadows();
+    if(kind==MindVision.class&&(flags&32)!=0)return new MindVision(1);
+    if(kind==Awareness.class&&(flags&64)!=0)return new Awareness();return null;
+  }
+  Iterable<MindVision> buffs(Class<?> kind){Level.trace.add("buffs:"+kind.getSimpleName());return distances;}
+}
+class Hero extends Char {HeroClass heroClass;}
+enum HeroClass {HUNTRESS,WARRIOR}
+class Mob extends Char {}
+class Heap {int pos;}
+class LoggedList<T> extends ArrayList<T> {
+  final String name;LoggedList(String name){this.name=name;}
+  @Override public Iterator<T> iterator(){Level.trace.add(name);return super.iterator();}
+}
+class HeapMap {final ArrayList<Heap> entries=new ArrayList<>();Collection<Heap> values(){Level.trace.add("heaps");return entries;}}
