@@ -1,78 +1,72 @@
 # Стек и технические решения
 
-Дата проверки официальных материалов: 2026-09-26. Это архитектурное решение, не результат установки пакетов: версии и совместная browser-сборка пока не проверены.
+Обновлено 2026-09-26. Обязательны [MANDATORY_RULES](MANDATORY_RULES.md). На checkpoint `6cc1858e1534b3b826e2ae0cf25e1bf52b2dd1d2` уже существует `web/package.json` с точными версиями и npm-конфигурацией. Это факт объявления зависимостей, **не доказательство установки, доступности этих версий или совместного запуска**. В данной документальной задаче пакеты не устанавливались и tests/build не запускались.
 
 ## Обязательная часть
 
-| Технология | Принятое назначение | Чего она не делает |
+| Технология | Назначение | Не допускается |
 | --- | --- | --- |
-| JavaScript + TypeScript | Основная реализация — strict TypeScript, исполняемый результат — JavaScript; .mjs допустим для инструментов | Две параллельные JS/TS-реализации одного правила не нужны |
-| Vite | Dev server, сборка и поставка браузерного приложения | Не владеет domain lifecycle и правилами |
-| Phaser 4, пакет `phaser` | Render, assets, input, camera, animation, audio | Не содержит combat/inventory/AI/turn economy |
-| `xstate` | Сценарии приложения и взаимодействия; загрузка, меню, запуск, продолжение, targeting, playback continuation | Не заменяет Actor scheduler и не дублирует domain state |
-| `zustand`, entrypoint `zustand/vanilla` | UI read models, selectors, ephemeral UI state | Не хранит второй изменяемый мир и не требует добавления React |
-| `phaser4-rex-plugins` | Layout, окна и компоненты в точном оригинальном оформлении | Не задаёт новый UI-дизайн и не подменяет исходные игровые алгоритмы |
+| TypeScript → JavaScript | strict TS — основной код; JS — исполняемый результат; .mjs — инструменты | Две параллельные реализации одного правила |
+| Vite | Dev/build/preview | Владение game state или исходной очередью |
+| Phaser 4 (`phaser`) | Один WebGL render runtime, assets/input/camera/animation/audio | Combat/AI/inventory в scene; замена на Phaser 3/PixiJS |
+| XState | Boot/menu/loading/targeting/playback orchestration | Подмена Actor scheduler и второй герой/мир в context |
+| Zustand (`zustand/vanilla`) | UI projections, selectors, ephemeral UI state | Второй mutable gameplay store или React-зависимость ради store |
+| phaser4-rex-plugins | Оригинальные UI controls/layout | Новый дизайн вместо оригинала, готовый plugin вместо непроверенного игрового алгоритма |
 
-Phaser 4 обязателен: не откатывать на Phaser 3 «ради совместимости», не подменять PixiJS. Доступность названия библиотеки не доказывает совместимость конкретного набора версий.
+Один Phaser WebGL canvas; Canvas fallback/DOM UI/другой renderer запрещены. Non-UI графика проходит project shader path; собственные stages — физические owner-local `.glsl`. UI использует Phaser/rex, но не требует отдельного shader на каждый control. Импорт shader source допустим; создание/генерация/склейка его строк в host-коде запрещены. Не переписывать vendor internals и не заменять оригинальные textures.
 
-Документация rex сейчас показывает:
+Путь rexUI, указанный в исходной документации контекста: `phaser4-rex-plugins/templates/ui/ui-plugin.js`. Фактические exports/types/совместимость с установленным Phaser нужно проверить на P01; старые примеры Phaser 3 не считаются доказательством. Подключать нужные plugins явно и освобождать owned resources/subscriptions.
 
-```ts
-import RexUIPlugin from 'phaser4-rex-plugins/templates/ui/ui-plugin.js';
-```
+## N01: navcat — DEFERRED / NOT INSTALLED
 
-Это проверенный путь в документации, но его работу с выбранными published versions нужно подтвердить на P01. Подключать только необходимые возможности, регистрировать scene plugin явно и освобождать подписки/объекты при shutdown. Не полагаться на то, что старые примеры Phaser 3 подходят внутреннему renderer Phaser 4.
+Пользовательница оставила библиотеку под вопросом. В базовый перенос её не добавлять. Сначала переносится исходный клеточный PathFinder для карты 32×32 с точной семантикой соседей, маршрута, диагоналей, flee/seek и динамической занятости. FOV и баллистика — отдельные узкие контракты, не NavigationManager со всем приложением.
 
-Для доменных алгоритмов, имеющихся в оригинале (pathfinding, FOV, RNG, FSM конкретного AI), наличие похожего плагина rex не является основанием для замены. Сначала поведенческие fixtures, затем решение о переиспользовании.
+Применимость альтернативной навигации оценивается только под конкретную задачу с доказанной эквивалентностью всех используемых операций и измеримой пользой. Изоляция алгоритма позволяет замену позднее, но не требует двух реализаций сейчас. Правила PSX не делают navcat обязательным здесь.
 
-## Решение N01: navcat — DEFERRED / NOT INSTALLED
+## P01: версии, declarations и окружение
 
-Пользовательница оставила navcat под вопросом. В базовый перенос пакет **не добавлять**.
+Проверить registry metadata, engines, exports, types и peer dependencies **фактически записанного** набора. Если конкретная версия отсутствует/несовместима, зафиксировать проблему и исследовать поддержанный набор, не менять обязательный стек молча. Не брать latest как воспроизводимую спецификацию.
 
-Причина: официальное описание navcat — построение и запросы navigation mesh для 3D floor-based navigation. Исходный Pixel Dungeon использует клеточную карту 32×32, массивы соседей и PathFinder из PD-classes. Navmesh не гарантирует совпадение маршрута, порядка обхода, углов, диагоналей, flee/seek и взаимодействия с динамическими препятствиями.
+Сохранить один package manager; согласованно закрепить его версию, Node и один lockfile. Не утверждать, что lockfile/успешная установка уже есть, только по package.json. Node должен удовлетворять реальным engines всего набора; исторические минимумы не заменяют проверку.
 
-Базовая реализация: порт исходной клеточной логики за узким PathfindingPort в модуле grid. FOV и баллистика имеют свои контракты; не объединять их в огромный NavigationManager.
+Использовать vanilla TS setup; не добавлять React/Vue/сервер. Strict, noUncheckedIndexedAccess, exactOptionalPropertyTypes и отдельный typecheck; без any/ts-ignore/фиктивных declarations. Все собственные type/interface контракты — ambient `web/src/types/<owner>/*.d.ts`; никаких type imports/exports. Runtime public index экспортирует значения, не типы.
 
-Вернуться к navcat можно только с конкретной задачей и тестовым сравнением всех используемых операций. Потребуются неизменные результаты, измеримая польза и отдельное зафиксированное решение. Возможность подключить другой адаптер не означает, что сейчас нужно писать или устанавливать оба. Для будущего другого проекта библиотека может быть полезна, но это не довод менять алгоритм этого порта.
+Owner-local JSON доверенный и неизменяемый; не добавлять schema-validation/normalization pipeline. Внешние save/command границы и original parity tests остаются обязательными.
 
-## Версии и окружение: правила P01
+## Automated gate: только без браузера
 
-1. Проверить registry metadata, engines, exports, types и peer dependencies для реальных опубликованных версий Phaser 4, rex, XState, Zustand, TS и Vite. Не угадывать версии из памяти и не записывать «latest» как воспроизводимую конфигурацию.
-2. Если к началу P01 уже есть выбранный package manager/lockfile, сохранить его. Иначе выбрать один и записать в STATUS; не создавать npm/yarn/pnpm lockfiles одновременно.
-3. Зафиксировать exact прямые зависимости и один lockfile, версию Node и package manager. При конфликте сначала исследовать поддержанный набор; не менять обязательный стек молча.
-4. Vite guide на дату проверки указывает Node 20.19+ / 22.12+ и возможные более строгие требования шаблонов. Выбирать поддерживаемый на момент реализации runtime, удовлетворяющий фактическим engines всего набора, не трактовать этот минимум как вечную рекомендацию конкретной Node-ветки.
-5. Использовать vanilla TypeScript setup, не добавлять React/Vue и сервер без задачи.
-6. Обязателен отдельный typecheck. Начальные настройки: strict, noUncheckedIndexedAccess, exactOptionalPropertyTypes; любые исключения должны быть локальными и объяснёнными. Не отключать type safety глобальным any или фиктивными декларациями API.
-7. Зависимости домена от framework/browser API запрещать автоматической архитектурной проверкой.
+Агенту запрещены browser launch/attach/automation: Chrome/Edge/Chromium, CDP, Playwright/Puppeteer и wrappers/CI, запускающие браузер. **Существующий `test:e2e` на Playwright не запускать.** P01-RULES должен согласовать прежнюю заготовку scripts/tests/config с этим правилом; в этой документационной задаче code/config сохранены.
 
-## Smoke-test совместимости
+Допустимые области автоматизации: Node unit/contract/headless scenario tests, Java oracle, typecheck, build без browser auto-open, import/policy checks, inventory/hash/provenance comparison и offline сравнение уже предоставленных кадров. Node harness для public command flow не называется доказанным browser e2e.
 
-До реализации UI проверить в реальном браузере:
+Целевые scripts: `build`, `typecheck`, `lint`, `test:unit`, `test:contracts`, `test:parity`, `test:tools`, `check:boundaries`; при необходимости явно отдельный headless scenario runner. `dev`/`preview` предназначены также для человека; агент не включает auto-open и не обходит запрет браузера их wrappers. Проверять реальное содержание scripts перед запуском.
 
-- старт Vite dev и production preview с Phaser 4;
-- загрузку и показ оригинального sprite без размытия/искажения пропорций;
-- rex container + кнопку/окно с оригинальным frame/bitmap text;
-- input -> XState -> тестовую domain operation -> Zustand projection -> render;
-- отсутствие React в обязательном runtime пути;
-- создание/уничтожение сцены, отписки, повторный старт;
-- production asset URLs при ненулевом base path, работу загрузки в целевом размещении;
-- отсутствие console errors и неявного Phaser 3 fallback.
+Не создавать content validator вопреки правилам CORE. Policy tests должны ловить deep imports/cycles/framework use в domain, недопустимые declarations/type imports, inline GLSL и browser automation. Старый check-boundaries может покрывать лишь часть: выяснить, а не объявить всё enforced.
 
-Тестовую операцию/fixture явно обозначить как инфраструктурную, не как перенесённую механику. Без результатов этого smoke-test стек имеет статус SELECTED_NOT_VERIFIED.
+Отсутствующие fixtures/skip дают NOT_READY/NOT_VERIFIED, не подтверждают полный паритет. CI не публикует игру сам по себе и не запускает browser tasks по поручению агента.
 
-## Dev tooling
+## Ручной smoke-test совместимости
 
-На P01 выбрать и закрепить минимально достаточные инструменты unit/contract/parity, browser e2e и проверки import graph. Допустимы Vitest, Playwright и ESLint/анализатор зависимостей после проверки актуальных версий; это dev tooling, не новая игровая архитектура.
+Сценарий подготавливает агент; **запускает человек** на конкретном commit/build:
 
-Создать реально работающие scripts `dev`, `build`, `preview`, `typecheck`, `lint`, `test:unit`, `test:contracts`, `test:parity`, `test:e2e`, `check:boundaries`. Не выдавать отсутствие fixtures или skipped tests за успешный parity gate. CI собирает и проверяет, но сам по себе не публикует игру без отдельной задачи.
+1. Vite dev и production preview действительно открываются с Phaser 4.
+2. Оригинальный sprite через project shader path сохраняет pixels/масштаб/пропорции.
+3. Rex container/button/window использует оригинальные frame/text metrics.
+4. Ввод идёт через command → domain → XState/projection → render, а не прямой mutation scene.
+5. Повторный scene/run lifecycle не создаёт дубликатов подписок/объектов/звука.
+6. Production asset URLs работают с ненулевым base path; нет missing resources, console errors или silent fallback.
 
-## Проверенные первичные источники
+Evidence: commit/build, браузер/OS, viewport/DPR, шаги/inputs, screenshots или video, observations/errors. Технический fixture не считать уже перенесённой игровой механикой. Без такого отчёта browser integration остаётся NOT_VERIFIED независимо от зелёного build.
+
+## Первичные справочные материалы
+
+Исторические ссылки сохранены для целевой проверки на P01, а не как отчёт об установке в этой сессии:
 
 - Phaser: https://github.com/phaserjs/phaser
 - Rex UI: https://rexrainbow.github.io/phaser3-rex-notes/docs/site/ui-overview/
-- XState actors: https://stately.ai/docs/actors
-- Zustand vanilla API: https://zustand.docs.pmnd.rs/reference/index
+- XState: https://stately.ai/docs/actors
+- Zustand: https://zustand.docs.pmnd.rs/reference/index
 - Vite: https://vite.dev/guide/
-- Navcat: https://github.com/isaac-mason/navcat и https://navcat.dev/
+- Navcat: https://github.com/isaac-mason/navcat
 
-Эти ссылки подтверждают назначения/API библиотек, а не факт запуска нашего приложения. Полный список установленного стека появится в package.json/lockfile вместе с первым успешным smoke-test.
+Фактические версии/результаты фиксируются в package.json, lockfile и STATUS после соответствующих проверок. Стек выбран; полный runtime паритет пока не подтверждён.
