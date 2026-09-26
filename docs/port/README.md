@@ -1,55 +1,72 @@
 # Контекст полного переноса Pixel Dungeon
 
-## Заказ
+Полностью перенести существующий Pixel Dungeon 1:1 в браузер на strict TypeScript/JavaScript + Vite + Phaser 4 + XState + Zustand vanilla + phaser4-rex-plugins. Navcat — отдельный кандидат. Код следует SOLID/KISS/DRY/OOP/DDD; самостоятельная логика изолирована и выносится вместе с явными dependencies, а не всем приложением.
 
-Полностью перенести существующую игру 1:1 в браузер на JS/TS + Vite + Phaser 4 + XState + Zustand + phaser4-rex-plugins. navcat рассматривается отдельно. Требования к коду: SOLID, KISS, DRY, OOP и DDD; каждая самостоятельная область логики изолирована и может быть вынесена в другой проект без копирования всего приложения.
+Цель — исходная игра, включая редкие ветки, весь контент, интерфейс, графику и звук. Новые механики/ребаланс/редизайн не входят в перенос. Внутреннюю Java-структуру менять можно; наблюдаемое поведение — нельзя.
 
-Это перенос поведения и контента, а не создание новой игры по мотивам. Полное покрытие, в том числе редко встречающихся веток и интерфейсов, остаётся целью всех этапов. Вертикальные срезы используются только как способ проверки.
+## Навигация
 
-## Что действительно установлено 26 сентября 2026
+| Документ | Назначение |
+| --- | --- |
+| [AGENTS.md](../../AGENTS.md) | Обязательный вход, маршрутизация контекста и критические ограничения |
+| [MANDATORY_RULES.md](MANDATORY_RULES.md) | Правила из PSX/CORE, их источники и явные адаптации к Pixel Dungeon |
+| [PLAN.md](PLAN.md) | Записанный план P00–P10: результат этапа, зависимости, критерии готовности |
+| [STATUS.md](STATUS.md) | Фактическое состояние, evidence, блокеры и следующий шаг |
+| [ARCHITECTURE.md](ARCHITECTURE.md) | DDD/ownership, APIs, declarations, lifecycle, extraction |
+| [PARITY.md](PARITY.md) | Независимые проверки original behavior, визуального/звукового соответствия |
+| [STACK.md](STACK.md) | Роли библиотек, toolchain, запрет browser automation, ручной smoke-test |
+| [source-baseline.json](source-baseline.json) | Закреплённая исходная идентичность и снимок начального аудита |
+| [source-map.json](source-map.json) | Уже существующий реестр соответствий; полнота behavioral coverage проверяется отдельно |
+
+PLAN — одна действующая очередь, STATUS — текущие факты. Readiness-поля раннего baseline manifest и исторический отчёт не отменяют новые факты STATUS. Нет второй очереди в Issues/переписке; source-map не объявляет DONE только по наличию target file.
+
+## Обновление 26 сентября 2026: сначала план и правила
+
+Согласованный порядок записан в PLAN: **полный перечень → границы/стек → точное ядро → первый законченный сценарий → весь контент → итоговая приёмка**. UI и сохранения начинаются на первом сквозном сценарии, а не откладываются до конца.
+
+Обязательные правила прочитаны в `Cthulhu-tech/psx` и `Cthulhu-tech/core-`, их commits закреплены в MANDATORY_RULES. В порт перенесены boundaries/one owner, composition/lifecycle, strict quality, trusted owner-local JSON, owner-scoped ambient `.d.ts`, физические GLSL, shader-only non-UI WebGL presentation, отсутствие hidden fallback, запрет агентского запуска браузера, targeted verification и честный статус.
+
+Специфические WebGPU/React/3D/LOD, число save slots, gameplay content/баланс и task IDs других игр не переносятся. Java compatibility и исходная очередь Pixel Dungeon сохраняются. Browser evidence получает человек; агент выполняет безбраузерные проверки и анализирует evidence. Недостающая visual проверка остаётся NOT_VERIFIED.
+
+В main уже есть inventory/source-map и начальный web scaffold. Не удалять и не создавать их с нуля. Новая P01-RULES приводит существующую реализацию к принятым правилам; изменение документов не считается внедрением политики в code/tests. В этой сессии code/config не менялись и runtime checks не запускались.
+
+## Закреплённый оригинал
 
 | Факт | Источник |
 | --- | --- |
-| Эталонный repository/commit | `Cthulhu-tech/pixel_dungeon@ce7f241515fd5c040fcf18b4beb5b7a49d9d535f` |
-| Корневое дерево эталона | `ef7b1ef7568c2aa15c3d8c527e9e6004901e4c8a` |
-| Название/версия Android | `AndroidManifest.xml`: `com.watabou.pixeldungeon`, `1.9.1`, versionCode `74` |
-| Исходный стек | Java/Android; каталоги `src/`, `assets/`, `res/` |
-| Необходимая внешняя библиотека | README указывает `watabou/PD-classes`; она не включена в корневое дерево игры |
-| Кандидат внешней библиотеки | `watabou/PD-classes@c0b690a4163020963e70a58a7d4f27965dc8f134`; commit message содержит merge ветки 1.9.1, но совместная сборка ещё не проверена |
-| Размер клеточной карты | `levels/Level.java`: WIDTH=32, HEIGHT=32; порядок соседей задан массивами |
-| Планировщик | `actors/Actor.java`: float-время, выбор из HashSet, приостановка при движущемся sprite и продолжение через `next()` |
-| Случайность внешней библиотеки | прочитанный `PD-classes/com/watabou/utils/Random.java` использует Java `Math.random()` и float/int-преобразования; нельзя обещать общий seed с браузерным Math.random |
-| Внешнее время | `Dungeon.switchLevel()` вычисляет nightMode по локальному часу; часы — часть входных условий сравнения |
-| Лицензионные уведомления | заголовки прочитанных Java-файлов игры и Random: GPL version 3 or later; сохранить LICENSE.txt и авторство |
+| Игра | `Cthulhu-tech/pixel_dungeon@ce7f241515fd5c040fcf18b4beb5b7a49d9d535f` |
+| Корневое дерево baseline | `ef7b1ef7568c2aa15c3d8c527e9e6004901e4c8a` |
+| Manifest | `com.watabou.pixeldungeon`, 1.9.1, versionCode 74 |
+| Исходный стек/корни | Java/Android; `src/`, `assets/`, `res/` |
+| Внешняя библиотека | README указывает `watabou/PD-classes` |
+| Candidate PD-classes | `c0b690a4163020963e70a58a7d4f27965dc8f134`; совместимость original/harness требует evidence |
+| Grid | Level: WIDTH=32, HEIGHT=32, определённые массивы соседей |
+| Turns | Actor: Java float time, HashSet, sprite.isMoving, next() |
+| Random | Исследованный PD-classes wrapper: Java Math.random и float/int casts |
+| Внешнее время | Dungeon.switchLevel: nightMode по локальному часу |
+| Уведомления | Прочитанные Java headers: GPL version 3 or later; сохранить LICENSE/авторство, отдельно проверить assets |
 
-Источники игры доступны по постоянным ссылкам вида `https://github.com/Cthulhu-tech/pixel_dungeon/blob/ce7f241515fd5c040fcf18b4beb5b7a49d9d535f/<path>`.
+Эти исходные наблюдения не являются доказательством запуска или полного аудита поведения. Точное происхождение всегда repository/commit/path/symbol. Не заменять pin свежим upstream HEAD и не обещать общий seed Java/JS до проверки RNG.
 
-На момент создания контекста прочитаны корневое дерево, README, AndroidManifest, Actor целиком, значимые части Dungeon и Level, Random внешней библиотеки и metadata её commit. **Это начальный аудит, не полная инвентаризация и не проверка запуска оригинала.** Не выводить из этого несуществующее количество перенесённых файлов или процент готовности.
+## Размещение и переносимость
 
-## Документы
+Исходные `src/`, `assets/`, `res/`, AndroidManifest/лицензия остаются неизменными. Новый runtime — `web/`; definitions/manifests — у module/adapter owner; project types — `web/src/types/<owner>/*.d.ts`; GLSL — у presentation owner. Runtime entrypoints экспортируют значения, не types. Module extraction включает только нужные declarations/dependencies и проверяется в отдельном Node host.
 
-- `../../AGENTS.md` — обязательные правила для любого исполнителя.
-- `ARCHITECTURE.md` — структура, владение состоянием, границы DDD и контракт выноса модуля.
-- `PARITY.md` — что считается 1:1, как проверять Java/JS, графику и полный контент.
-- `STACK.md` — роли библиотек и решение по navcat.
-- `PLAN.md` — очередность реализации, зависимости и критерии приёмки.
-- `STATUS.md` — фактическое текущее состояние; обновляется после каждой сессии.
-- `source-baseline.json` — машинно-читаемая фиксация эталона и незакрытых проверок.
+Инструменты аудита — `tools/port/`; канонические эталоны с provenance — `tests/reference/`; намеренно сохраняемые компактные отчёты — `tests/reports/`. Scratch/logs/raw captures — root `tmp/`, Git ignored. Не коммитить dist/node_modules/browser profiles или копии worktrees. Не создавать пустые каталоги/новые движки/редакторы ради схемы.
 
-## Где размещать новый код
+## Реестр соответствий
 
-Оригинал остаётся на своих местах. Новый проект создаётся в `web/`. Инструменты аудита/сравнения — в `tools/port/`; эталонные fixtures и отчёты — в `tests/reference/` и `tests/reports/`. Эталонные артефакты должны иметь provenance и не подменяться результатами самого TS-порта.
-
-Не создавать все запланированные каталоги пустыми. Создавать их вместе с первым настоящим кодом, fixture или документом. Не добавлять React, ECS, новый игровой движок, универсальный редактор или сервер без отдельной реальной задачи.
-
-## Дальнейший реестр соответствий
-
-На P00 создать `docs/port/source-map.json`. Он должен покрыть все Java-файлы, необходимые внешние классы, ассеты, контент и пользовательские интерфейсы, а не только удобные для переноса подсистемы. Для элемента хранить:
+Существующий source-map проверяется и расширяется на P00. File-level запись не заменяет отдельные branches/content/UI states. Для каждого поведения требуется source, owner, target files, зависимости и проверки. Целевая запись:
 
 ```json
 {
   "id": "stable-source-feature-id",
-  "source": { "repository": "owner/repo", "commit": "full-sha", "path": "path", "symbols": [] },
+  "source": {
+    "repository": "owner/repo",
+    "commit": "full-sha",
+    "path": "path",
+    "symbols": []
+  },
   "ownerModule": "module-name",
   "targetFiles": [],
   "testFiles": [],
@@ -59,6 +76,6 @@
 }
 ```
 
-Этот объект — формат, а не готовый mapping. Допустимые статусы: TODO, IN_PROGRESS, IMPLEMENTED_UNVERIFIED, VERIFIED, BLOCKED. EXCLUDED_ALLOWED допускается только для явно согласованного платформенного исключения с причиной, владельцем решения и ссылкой на него; не удалять такие строки из полного реестра.
+Это пример данных, не runtime schema-validator и не заявление о реализованном behavioral mapping. Совместимое расширение существующего writer/readers делается одной P00-задачей, без сброса статусов.
 
-Рядом вести `docs/port/discrepancies.md` с несовпадениями, наблюдаемыми багами оригинала и платформенными ограничениями. Числа покрытия получают только из полного реестра; количество файлов не равно полноте поведения.
+Статусы: TODO, IN_PROGRESS, IMPLEMENTED_UNVERIFIED, VERIFIED, BLOCKED. Явно согласованное platform exclusion сохраняется с причиной и решением; строка не удаляется для улучшения покрытия. Расхождения/наблюдаемые баги оригинала ведутся в `discrepancies.md` при его создании P00.2. Покрытие выводится из реестра/evidence, не количества TS-файлов.
